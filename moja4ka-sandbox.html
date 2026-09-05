@@ -88,11 +88,21 @@
   @media (max-width: 900px) { .deck { gap: 24px; } }
 
   .phone-label {
-    display: flex; align-items: center; gap: 7px;
+    display: flex; align-items: center; gap: 8px;
     font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
     color: var(--ink-faint);
   }
   .phone-label i { width: 5px; height: 5px; border-radius: 999px; background: var(--accent); display: block; }
+
+  /* sandbox-only controls: they sit outside the device frame, not in the product UI */
+  .chip {
+    font: inherit; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-dim); background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: 4px 9px; cursor: pointer;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--accent); }
+  .chip[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -144,9 +154,12 @@ function icon(paths) {
 const Home = icon('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>');
 const WalletIcon = icon('<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>');
 const Bell = icon('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>');
+const Menu = icon('<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>');
+const MoreHorizontal = icon('<circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/>');
 const MessageCircle = icon('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>');
 const ChevronDown = icon('<path d="m6 9 6 6 6-6"/>');
 const ChevronRight = icon('<path d="m9 18 6-6-6-6"/>');
+const ArrowLeft = icon('<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>');
 const Plus = icon('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const X = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 const Check = icon('<path d="M20 6 9 17l-5-5"/>');
@@ -159,6 +172,11 @@ const Tv = icon('<rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><path d
 const Router = icon('<rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6.01 18H6"/><path d="M10.01 18H10"/><path d="M15 10v4"/><path d="M17.84 7.17a4 4 0 0 0-5.66 0"/><path d="M20.66 4.34a8 8 0 0 0-11.31 0"/>');
 const Smartphone = icon('<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>');
 const Send = icon('<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>');
+const Package = icon('<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>');
+const ShoppingBag = icon('<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>');
+const User = icon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>');
+const HelpCircle = icon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>');
+const LogOut = icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>');
 
 // ---------- design tokens (light, 4ka.sk-inspired) ----------
 const C = {
@@ -206,16 +224,45 @@ const seedNumbers = [
   { id: "n2", number: "0900 333 444", label: "Dcéra" },
 ];
 
+// n2 starts without a program, so the empty state is reachable by switching numbers
+const seedAssignments = {
+  n1: { tariffId: "t3", addOns: ["a1"] },
+  n2: { tariffId: null, addOns: [] },
+};
+
 const notifications = [
   { id: 1, title: "Vyčerpali ste 80 % dát", time: "Dnes, 8:14" },
   { id: 2, title: "Faktúra za august je pripravená", time: "Včera" },
   { id: 3, title: "Nová ponuka: Internet 1000", time: "2 dni" },
 ];
 
+const menuItems = [
+  { id: "m1", name: "Profil", icon: User },
+  { id: "m2", name: "Podpora", icon: HelpCircle },
+  { id: "m3", name: "Odhlásiť sa", icon: LogOut },
+];
+
 const purchaseHistory = [
   { id: 1, title: "Dobitie kreditu", date: "2. sep", amount: "+20,00 €" },
   { id: 2, title: "SLOBODA ∞ — mesačná platba", date: "1. sep", amount: "-20,00 €" },
   { id: 3, title: "GIGA 2 GB navyše", date: "28. aug", amount: "-2,00 €" },
+];
+
+const eshopProducts = [
+  {
+    id: "sim",
+    name: "Fyzická SIM",
+    desc: "Doručenie na adresu",
+    icon: Package,
+    steps: ["Vyber SIM", "Vyber produkt", "Zadaj doručovaciu adresu", "Dokonči objednávku", "SIM ti príde na adresu"],
+  },
+  {
+    id: "esim",
+    name: "eSIM",
+    desc: "Aktivácia hneď v telefóne",
+    icon: Smartphone,
+    steps: ["Vyber eSIM", "Vyber produkt", "Zaplať", "Dostaneš aktivačné údaje", "Aktivuj eSIM"],
+  },
 ];
 
 // ---------- helpers ----------
@@ -229,7 +276,7 @@ function loyaltySchedule(start, floor, step, months) {
   return out;
 }
 
-function StaircaseChart({ start, floor, step, months, accent }) {
+function StaircaseChart({ start, floor, step, months, accent, labelColor }) {
   const values = loyaltySchedule(start, floor, step, months);
   const max = start;
   const min = floor;
@@ -247,7 +294,7 @@ function StaircaseChart({ start, floor, step, months, accent }) {
         return (
           <g key={i}>
             <rect x={x} y={y} width={barW} height={barH} rx={4} fill={i === values.length - 1 ? accent : `${accent}55`} />
-            <text x={x + barW / 2} y={h - 1} textAnchor="middle" fontSize="7.5" fill={C.inkFaint} fontFamily={FONT_BODY}>
+            <text x={x + barW / 2} y={h - 1} textAnchor="middle" fontSize="7.5" fill={labelColor || C.inkFaint} fontFamily={FONT_BODY}>
               {i === 0 ? "štart" : `M${i}`}
             </text>
           </g>
@@ -257,15 +304,15 @@ function StaircaseChart({ start, floor, step, months, accent }) {
   );
 }
 
-function ProgressBar({ pct, color, label, value }) {
+function ProgressBar({ pct, label, value }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: FONT_BODY, fontSize: 11 }}>{label}</span>
-        <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600 }}>{value}</span>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+        <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11.5 }}>{label}</span>
+        <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 11.5, fontWeight: 600 }}>{value}</span>
       </div>
-      <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.25)", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${Math.min(100, pct * 100)}%`, background: color, borderRadius: 999 }} />
+      <div style={{ height: 6, borderRadius: 999, background: C.violetSoft, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${Math.min(100, pct * 100)}%`, background: C.violet, borderRadius: 999 }} />
       </div>
     </div>
   );
@@ -299,27 +346,68 @@ function Pill({ children, tone = "violet" }) {
   );
 }
 
-function SectionHeader({ title }) {
+function SectionHeader({ title, action }) {
   return (
-    <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 600, marginBottom: 10 }}>
-      {title}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+      <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 600 }}>{title}</div>
+      {action}
     </div>
   );
 }
 
-function Picker({ items, onPick, onClose, renderRight }) {
+// generic bottom sheet — one shape for program details, add-service, menu
+function Sheet({ title, subtitle, onClose, children, footer }) {
   return (
-    <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 10, marginBottom: 14, boxShadow: "0 6px 18px rgba(76,31,130,0.08)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 4px 8px" }}>
-        <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600 }}>Vyber možnosť</span>
-        <X size={14} color={C.inkFaint} onClick={onClose} style={{ cursor: "pointer" }} />
-      </div>
-      {items.map((it) => (
-        <div key={it.id} onClick={() => onPick(it.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 8px", borderRadius: 10, cursor: "pointer" }}>
-          <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13 }}>{it.name}</span>
-          {renderRight ? renderRight(it) : <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>{it.price} €</span>}
+    <div
+      onClick={onClose}
+      style={{ position: "absolute", inset: 0, background: "rgba(30,21,48,0.35)", zIndex: 20, display: "flex", alignItems: "flex-end" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", background: C.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: "12px 18px 20px", maxHeight: "82%", display: "flex", flexDirection: "column" }}
+      >
+        <div style={{ width: 38, height: 4, borderRadius: 999, background: C.line, margin: "0 auto 12px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10 }}>
+          <div>
+            <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 600 }}>{title}</div>
+            {subtitle && <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 2 }}>{subtitle}</div>}
+          </div>
+          <X size={16} color={C.inkFaint} onClick={onClose} style={{ cursor: "pointer", marginTop: 2 }} />
         </div>
-      ))}
+        <div style={{ overflowY: "auto", flex: 1 }}>{children}</div>
+        {footer && <div style={{ paddingTop: 12 }}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function SheetRow({ title, meta, right, onClick, icon: Icon }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 4px", borderBottom: `1px solid ${C.line}`, cursor: onClick ? "pointer" : "default" }}
+    >
+      {Icon && (
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={14} color={C.violet} />
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 500 }}>{title}</div>
+        {meta && <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>{meta}</div>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function PrimaryButton({ children, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "13px 0", borderRadius: 13, background: C.violet, cursor: "pointer" }}
+    >
+      <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>{children}</span>
     </div>
   );
 }
@@ -357,7 +445,7 @@ function NumberSelector({ numbers, activeId, onSelect }) {
   );
 }
 
-// ---------- Hugo chat overlay ----------
+// ---------- overlays ----------
 function HugoChat({ onClose }) {
   const bubbles = [
     { from: "hugo", text: "Ahoj! Som Hugo. Ako ti dnes môžem pomôcť?" },
@@ -428,117 +516,222 @@ function NotificationsPanel({ onClose }) {
   );
 }
 
+// general app menu — deliberately kept away from telecom services
+function MenuSheet({ onClose }) {
+  return (
+    <Sheet title="Menu" subtitle="Účet a nastavenia" onClose={onClose}>
+      {menuItems.map((m) => (
+        <SheetRow key={m.id} icon={m.icon} title={m.name} right={<ChevronRight size={14} color={C.inkFaint} />} onClick={() => {}} />
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 4px 2px", color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>
+        <MoreHorizontal size={14} color={C.inkFaint} />
+        Ďalšie položky menu — TBD
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------- Mobilné služby ----------
+function ProgramCard({ tariff, onOpen }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 18, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 132 }}
+    >
+      <div>
+        <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11 }}>Váš program</div>
+        <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 600, marginTop: 2 }}>{tariff.name}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 8 }}>
+          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{tariff.price}</span>
+          <span style={{ color: "rgba(255,255,255,0.75)", fontFamily: FONT_BODY, fontSize: 12.5 }}>€ / mesiac</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+        <span style={{ color: "rgba(255,255,255,0.8)", fontFamily: FONT_BODY, fontSize: 11.5, fontWeight: 600 }}>Detail programu</span>
+        <ChevronRight size={14} color="rgba(255,255,255,0.8)" />
+      </div>
+    </div>
+  );
+}
+
+function EmptyProgramArea() {
+  return (
+    <div style={{ border: `1px dashed ${C.line}`, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 132, background: C.surface }}>
+      <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Žiadny mobilný program</div>
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4, lineHeight: 1.4 }}>
+        Na tomto čísle zatiaľ nie je aktívna žiadna mobilná služba.
+      </div>
+    </div>
+  );
+}
+
+function AddServiceCard({ onOpen }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{ background: C.violetSoft, border: `1px dashed ${C.violet}55`, borderRadius: 18, padding: 14, minHeight: 132, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 9, cursor: "pointer", textAlign: "center" }}
+    >
+      <div style={{ width: 40, height: 40, borderRadius: 999, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Plus size={22} color="#fff" strokeWidth={2.2} />
+      </div>
+      <div style={{ color: C.violetDeep, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, lineHeight: 1.25 }}>
+        Pridať novú službu
+      </div>
+    </div>
+  );
+}
+
+// detail of the current program; `Zmeniť program` swaps this sheet into picker mode
+function ProgramSheet({ tariff, onClose, onChangeTariff }) {
+  const [mode, setMode] = useState("detail");
+
+  if (mode === "change") {
+    return (
+      <Sheet title="Zmeniť program" subtitle="Vyber iný paušál pre toto číslo" onClose={onClose}>
+        {tariffCatalog.map((t) => (
+          <SheetRow
+            key={t.id}
+            title={t.name}
+            meta={`${t.dataLabel} · ${t.minLabel}`}
+            onClick={() => { onChangeTariff(t.id); setMode("detail"); }}
+            right={
+              <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{t.price} €</span>
+                {t.id === tariff.id && <Check size={14} color={C.violet} />}
+              </span>
+            }
+          />
+        ))}
+      </Sheet>
+    );
+  }
+
+  return (
+    <Sheet
+      title={tariff.name}
+      subtitle={`${tariff.price} € / mesiac`}
+      onClose={onClose}
+      footer={<PrimaryButton onClick={() => setMode("change")}>Zmeniť program</PrimaryButton>}
+    >
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
+        Zostáva do konca mesiaca
+      </div>
+      <ProgressBar pct={tariff.dataPct} label="Mobilné dáta" value={tariff.dataLabel} />
+      <ProgressBar pct={tariff.minPct} label="Volania / SMS" value={tariff.minLabel} />
+
+      {tariff.digitalOnly && (
+        <div style={{ marginTop: 6 }}>
+          <Pill tone="coral"><CreditCard size={11} /> Iba digitálne, cez kartu</Pill>
+        </div>
+      )}
+
+      {tariff.loyalty && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+            Vernostná zľava klesá k {tariff.loyalty.floor} €
+          </div>
+          <StaircaseChart start={tariff.price} floor={tariff.loyalty.floor} step={tariff.loyalty.step} months={tariff.loyalty.months} accent={C.violet} />
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+// adding a new service is its own action, separate from changing the program
+function AddServiceSheet({ hasProgram, activeAddOnIds, onClose, onPickTariff, onPickAddOn }) {
+  const availableAddOns = addOnCatalog.filter((a) => !activeAddOnIds.includes(a.id));
+  return (
+    <Sheet title="Pridať novú službu" subtitle="Nová služba k tomuto číslu" onClose={onClose}>
+      {!hasProgram && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+            Paušál
+          </div>
+          {tariffCatalog.map((t) => (
+            <SheetRow
+              key={t.id}
+              title={t.name}
+              meta={`${t.dataLabel} · ${t.minLabel}`}
+              onClick={() => onPickTariff(t.id)}
+              right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{t.price} €</span>}
+            />
+          ))}
+        </div>
+      )}
+
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+        Doplnkové balíčky
+      </div>
+      {availableAddOns.length ? (
+        availableAddOns.map((a) => (
+          <SheetRow
+            key={a.id}
+            title={a.name}
+            onClick={() => onPickAddOn(a.id)}
+            right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>+{a.price} €</span>}
+          />
+        ))
+      ) : (
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, padding: "10px 4px" }}>Všetky balíčky sú už aktívne.</div>
+      )}
+    </Sheet>
+  );
+}
+
 // ---------- home screen ----------
 function HomeScreen({
   numbers,
   activeNumberId,
   onSelectNumber,
   assignments,
-  onChangeTariff,
-  onAddAddOn,
-  onRemoveAddOn,
   fixedActive,
-  onAddFixed,
+  onRemoveAddOn,
   onRemoveFixed,
+  onOpenSheet,
   onOpenHugo,
   onOpenNotifications,
+  onOpenMenu,
 }) {
-  const [picker, setPicker] = useState(null); // 'tariff' | 'addon' | 'fixed' | null
-  const [tariffExpanded, setTariffExpanded] = useState(false);
   const [expandedFixed, setExpandedFixed] = useState(null);
 
-  const assignment = assignments[activeNumberId] || { tariffId: "t3", addOns: [] };
-  const tariff = tariffCatalog.find((t) => t.id === assignment.tariffId) || tariffCatalog[2];
+  const assignment = assignments[activeNumberId] || { tariffId: null, addOns: [] };
+  const tariff = tariffCatalog.find((t) => t.id === assignment.tariffId) || null;
   const activeAddOns = addOnCatalog.filter((a) => assignment.addOns.includes(a.id));
-  const availableAddOns = addOnCatalog.filter((a) => !assignment.addOns.includes(a.id));
   const activeFixed = fixedCatalog.filter((f) => fixedActive.includes(f.id));
-  const availableFixed = fixedCatalog.filter((f) => !fixedActive.includes(f.id));
 
   return (
     <div style={{ padding: "0 20px 24px" }}>
-      {/* top bar */}
+      {/* top bar: Hugo left, notifications + menu right */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 14px" }}>
         <div onClick={onOpenHugo} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: C.violetSoft, padding: "7px 12px", borderRadius: 999 }}>
           <MessageCircle size={14} color={C.violet} />
           <span style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>Hugo</span>
         </div>
-        <div onClick={onOpenNotifications} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
-          <Bell size={15} color={C.ink} />
-          <div style={{ position: "absolute", top: 8, right: 9, width: 6, height: 6, borderRadius: 999, background: C.coral }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div onClick={onOpenNotifications} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
+            <Bell size={15} color={C.ink} />
+            <div style={{ position: "absolute", top: 8, right: 9, width: 6, height: 6, borderRadius: 999, background: C.coral }} />
+          </div>
+          <div onClick={onOpenMenu} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Menu size={15} color={C.ink} />
+          </div>
         </div>
       </div>
 
       <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 13 }}>Dobré ráno</div>
       <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 23, fontWeight: 600, marginBottom: 16 }}>Tvoje 4ka</div>
 
-      <NumberSelector numbers={numbers} activeId={activeNumberId} onSelect={(id) => { onSelectNumber(id); setPicker(null); setTariffExpanded(false); }} />
+      <NumberSelector numbers={numbers} activeId={activeNumberId} onSelect={(id) => { onSelectNumber(id); setExpandedFixed(null); }} />
 
-      {/* mobilné služby */}
+      {/* mobilné služby: current program (2/3) vs. add a new service (1/3) */}
       <SectionHeader title="Mobilné služby" />
 
-      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 18, marginBottom: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div onClick={() => setTariffExpanded((v) => !v)} style={{ cursor: "pointer", flex: 1 }}>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11 }}>Váš program</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 600 }}>{tariff.name}</span>
-              <ChevronDown size={15} color="rgba(255,255,255,0.7)" style={{ transform: tariffExpanded ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 8 }}>
-              <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{tariff.price}</span>
-              <span style={{ color: "rgba(255,255,255,0.75)", fontFamily: FONT_BODY, fontSize: 13 }}>€ / mesiac</span>
-            </div>
-          </div>
-          <div
-            onClick={() => setPicker(picker === "addon" ? null : "addon")}
-            style={{ width: 34, height: 34, borderRadius: 999, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
-          >
-            <Plus size={17} color="#fff" />
-          </div>
-        </div>
-
-        {tariff.digitalOnly && (
-          <div style={{ marginTop: 10 }}>
-            <Pill tone="coral"><CreditCard size={11} /> Iba digitálne, cez kartu</Pill>
-          </div>
-        )}
-
-        {tariffExpanded && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.2)" }}>
-            <ProgressBar pct={tariff.dataPct} color="#fff" label="Mobilné dáta" value={tariff.dataLabel} />
-            <ProgressBar pct={tariff.minPct} color="#fff" label="Volania / SMS" value={tariff.minLabel} />
-            {tariff.loyalty && (
-              <div style={{ marginTop: 6 }}>
-                <div style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
-                  Vernostná zľava klesá k {tariff.loyalty.floor} €
-                </div>
-                <StaircaseChart start={tariff.price} floor={tariff.loyalty.floor} step={tariff.loyalty.step} months={tariff.loyalty.months} accent="#fff" />
-              </div>
-            )}
-            <div
-              onClick={() => setPicker(picker === "tariff" ? null : "tariff")}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 10, padding: "9px 0", borderRadius: 10, background: "rgba(255,255,255,0.15)", cursor: "pointer" }}
-            >
-              <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>Zmeniť program</span>
-              <ChevronRight size={13} color="#fff" />
-            </div>
-          </div>
-        )}
+      <div style={{ display: "grid", gridTemplateColumns: "1.85fr 1fr", gap: 9, marginBottom: 10 }}>
+        {tariff
+          ? <ProgramCard tariff={tariff} onOpen={() => onOpenSheet("program")} />
+          : <EmptyProgramArea />}
+        <AddServiceCard onOpen={() => onOpenSheet("add")} />
       </div>
-
-      {picker === "tariff" && (
-        <Picker
-          items={tariffCatalog}
-          onClose={() => setPicker(null)}
-          onPick={(id) => { onChangeTariff(activeNumberId, id); setPicker(null); }}
-          renderRight={(it) => (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>{it.price} €</span>
-              {it.id === assignment.tariffId && <Check size={13} color={C.violet} />}
-            </span>
-          )}
-        />
-      )}
 
       {activeAddOns.map((a) => (
         <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 13px", marginBottom: 8 }}>
@@ -550,24 +743,18 @@ function HomeScreen({
         </div>
       ))}
 
-      {picker === "addon" && (
-        <Picker
-          items={availableAddOns.length ? availableAddOns : [{ id: "none", name: "Všetky balíčky sú už aktívne", price: null }]}
-          onClose={() => setPicker(null)}
-          onPick={(id) => { if (id !== "none") onAddAddOn(activeNumberId, id); setPicker(null); }}
-        />
-      )}
-
       {/* fixné služby */}
       <div style={{ marginTop: 22 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <SectionHeader title="Fixné služby" />
-          <div onClick={() => setPicker(picker === "fixed" ? null : "fixed")} style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, marginTop: -10 }}>
-            <Plus size={13} /> Pridať
-          </div>
-        </div>
+        <SectionHeader
+          title="Fixné služby"
+          action={
+            <div onClick={() => onOpenSheet("fixed")} style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
+              <Plus size={13} /> Pridať
+            </div>
+          }
+        />
 
-        {activeFixed.length === 0 && picker !== "fixed" && (
+        {activeFixed.length === 0 && (
           <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, marginBottom: 8 }}>Zatiaľ žiadny internet ani TV k tomuto účtu.</div>
         )}
 
@@ -595,14 +782,6 @@ function HomeScreen({
             </div>
           );
         })}
-
-        {picker === "fixed" && (
-          <Picker
-            items={availableFixed.length ? availableFixed : [{ id: "none", name: "Všetky fixné služby sú už aktívne", price: null }]}
-            onClose={() => setPicker(null)}
-            onPick={(id) => { if (id !== "none") onAddFixed(id); setPicker(null); }}
-          />
-        )}
       </div>
 
       {/* promo — visually secondary */}
@@ -626,13 +805,13 @@ function HomeScreen({
   );
 }
 
-// ---------- wallet screen ----------
+// ---------- wallet screen: top up, card, history ----------
 function WalletScreen() {
   return (
     <div style={{ padding: "6px 20px 24px" }}>
       <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 23, fontWeight: 600, marginBottom: 16 }}>Peňaženka</div>
 
-      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 20, marginBottom: 16 }}>
+      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 20, marginBottom: 18 }}>
         <div style={{ color: "rgba(255,255,255,0.75)", fontFamily: FONT_BODY, fontSize: 12 }}>Aktuálny kredit</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 4 }}>
           <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 32, fontWeight: 700 }}>12,40</span>
@@ -644,13 +823,13 @@ function WalletScreen() {
       </div>
 
       <SectionHeader title="Platobná karta" />
-      <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 15, marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 15, marginBottom: 22, cursor: "pointer" }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <CreditCard size={18} color={C.violet} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>•••• •••• •••• 4471</div>
-          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Platnosť do 09/28</div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Platnosť do 09/28 · spravovať kartu</div>
         </div>
         <ChevronRight size={15} color={C.inkFaint} />
       </div>
@@ -669,22 +848,93 @@ function WalletScreen() {
   );
 }
 
+// ---------- e-shop: buying a new SIM product ----------
+function EshopScreen({ onBack }) {
+  const [openId, setOpenId] = useState("sim");
+  return (
+    <div style={{ padding: "6px 20px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ArrowLeft size={15} color={C.ink} />
+        </div>
+        <div>
+          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 600, lineHeight: 1.1 }}>E-shop</div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>Nové SIM produkty</div>
+        </div>
+      </div>
+
+      {eshopProducts.map((p) => {
+        const isOpen = openId === p.id;
+        return (
+          <div key={p.id} style={{ background: C.surface, border: `1px solid ${isOpen ? C.violet : C.line}`, borderRadius: 16, padding: 14, marginBottom: 10 }}>
+            <div onClick={() => setOpenId(isOpen ? null : p.id)} style={{ display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <p.icon size={17} color={C.violet} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>{p.desc}</div>
+              </div>
+              <ChevronDown size={14} color={C.inkFaint} style={{ transform: isOpen ? "rotate(180deg)" : "none" }} />
+            </div>
+
+            {isOpen && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 10.5, fontWeight: 600, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 9 }}>
+                  Priebeh objednávky
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {p.steps.map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: 999, background: C.violetSoft, color: C.violet, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {i + 1}
+                      </div>
+                      <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12.5 }}>{s}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 13 }}>
+                  <PrimaryButton onClick={() => {}}>Objednať {p.name}</PrimaryButton>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 14, color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>
+        <MoreHorizontal size={14} color={C.inkFaint} />
+        Checkout, ceny a finálny dizajn — TBD
+      </div>
+    </div>
+  );
+}
+
 // ---------- one independent phone instance ----------
 function PhoneApp({ label }) {
   const [tab, setTab] = useState("home");
   const [activeNumberId, setActiveNumberId] = useState("n1");
-  const [assignments, setAssignments] = useState({
-    n1: { tariffId: "t3", addOns: ["a1"] },
-    n2: { tariffId: "t1", addOns: [] },
-  });
+  const [assignments, setAssignments] = useState(seedAssignments);
   const [fixedActive, setFixedActive] = useState(["f1"]);
-  const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | null
+  const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | 'menu' | 'program' | 'add' | 'fixed' | null
 
-  const onChangeTariff = (numberId, tariffId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], tariffId } }));
-  const onAddAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: [...prev[numberId].addOns, addOnId] } }));
-  const onRemoveAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: prev[numberId].addOns.filter((a) => a !== addOnId) } }));
-  const onAddFixed = (fixedId) => setFixedActive((prev) => [...prev, fixedId]);
-  const onRemoveFixed = (fixedId) => setFixedActive((prev) => prev.filter((f) => f !== fixedId));
+  const assignment = assignments[activeNumberId] || { tariffId: null, addOns: [] };
+  const tariff = tariffCatalog.find((t) => t.id === assignment.tariffId) || null;
+  const availableFixed = fixedCatalog.filter((f) => !fixedActive.includes(f.id));
+
+  const setTariff = (numberId, tariffId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], tariffId } }));
+  const addAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: [...prev[numberId].addOns, addOnId] } }));
+  const removeAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: prev[numberId].addOns.filter((a) => a !== addOnId) } }));
+  const addFixed = (fixedId) => setFixedActive((prev) => [...prev, fixedId]);
+  const removeFixed = (fixedId) => setFixedActive((prev) => prev.filter((f) => f !== fixedId));
+
+  const reset = () => {
+    setTab("home");
+    setActiveNumberId("n1");
+    setAssignments(seedAssignments);
+    setFixedActive(["f1"]);
+    setOverlay(null);
+  };
 
   const tabs = useMemo(() => ([
     { id: "home", label: "Domov", icon: Home },
@@ -692,8 +942,13 @@ function PhoneApp({ label }) {
   ]), []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-      {label && <div className="phone-label"><i></i>{label}</div>}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+      <div className="phone-label">
+        <i></i>{label}
+        <button className="chip" aria-pressed={tab === "eshop"} onClick={() => { setTab(tab === "eshop" ? "home" : "eshop"); setOverlay(null); }}>E-shop</button>
+        <button className="chip" onClick={reset}>Reset</button>
+      </div>
+
       <div style={{ width: 375, height: 780, borderRadius: 44, background: "#000", padding: 10, boxShadow: "0 30px 60px rgba(30,21,48,0.35)" }}>
         <div style={{ width: "100%", height: "100%", borderRadius: 34, background: C.bg, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
           <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 120, height: 22, background: "#000", borderBottomLeftRadius: 14, borderBottomRightRadius: 14, zIndex: 30 }} />
@@ -701,6 +956,44 @@ function PhoneApp({ label }) {
 
           {overlay === "hugo" && <HugoChat onClose={() => setOverlay(null)} />}
           {overlay === "notif" && <NotificationsPanel onClose={() => setOverlay(null)} />}
+          {overlay === "menu" && <MenuSheet onClose={() => setOverlay(null)} />}
+
+          {overlay === "program" && tariff && (
+            <ProgramSheet
+              tariff={tariff}
+              onClose={() => setOverlay(null)}
+              onChangeTariff={(id) => setTariff(activeNumberId, id)}
+            />
+          )}
+
+          {overlay === "add" && (
+            <AddServiceSheet
+              hasProgram={!!tariff}
+              activeAddOnIds={assignment.addOns}
+              onClose={() => setOverlay(null)}
+              onPickTariff={(id) => { setTariff(activeNumberId, id); setOverlay(null); }}
+              onPickAddOn={(id) => { addAddOn(activeNumberId, id); setOverlay(null); }}
+            />
+          )}
+
+          {overlay === "fixed" && (
+            <Sheet title="Pridať fixnú službu" subtitle="Internet a TV k tomuto účtu" onClose={() => setOverlay(null)}>
+              {availableFixed.length ? (
+                availableFixed.map((f) => (
+                  <SheetRow
+                    key={f.id}
+                    icon={f.icon}
+                    title={f.name}
+                    meta={f.desc}
+                    onClick={() => { addFixed(f.id); setOverlay(null); }}
+                    right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{f.price} €</span>}
+                  />
+                ))
+              ) : (
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, padding: "10px 4px" }}>Všetky fixné služby sú už aktívne.</div>
+              )}
+            </Sheet>
+          )}
 
           <div style={{ flex: 1, overflowY: "auto" }}>
             {tab === "home" && (
@@ -709,20 +1002,20 @@ function PhoneApp({ label }) {
                 activeNumberId={activeNumberId}
                 onSelectNumber={setActiveNumberId}
                 assignments={assignments}
-                onChangeTariff={onChangeTariff}
-                onAddAddOn={onAddAddOn}
-                onRemoveAddOn={onRemoveAddOn}
                 fixedActive={fixedActive}
-                onAddFixed={onAddFixed}
-                onRemoveFixed={onRemoveFixed}
+                onRemoveAddOn={removeAddOn}
+                onRemoveFixed={removeFixed}
+                onOpenSheet={setOverlay}
                 onOpenHugo={() => setOverlay("hugo")}
                 onOpenNotifications={() => setOverlay("notif")}
+                onOpenMenu={() => setOverlay("menu")}
               />
             )}
             {tab === "wallet" && <WalletScreen />}
+            {tab === "eshop" && <EshopScreen onBack={() => setTab("home")} />}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
             {tabs.map(({ id, label: tlabel, icon: Icon }) => {
               const isActive = tab === id;
               return (
@@ -732,6 +1025,13 @@ function PhoneApp({ label }) {
                 </div>
               );
             })}
+            {/* third slot stays undecided — placeholder only, no invented destination */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: C.inkFaint, opacity: 0.55 }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: `1px dashed ${C.inkFaint}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MoreHorizontal size={12} color={C.inkFaint} />
+              </div>
+              <span style={{ fontSize: 10, fontFamily: FONT_BODY, fontWeight: 600, letterSpacing: ".04em" }}>TBD</span>
+            </div>
           </div>
         </div>
       </div>
