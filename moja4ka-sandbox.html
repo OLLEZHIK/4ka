@@ -663,7 +663,7 @@ function ProgramCard({ tariff, onOpen }) {
 }
 
 // `wide` is the whole of Mobilné služby when the number has nothing yet
-function AddServiceCard({ onOpen, wide }) {
+function AddServiceCard({ onOpen, wide, label = "Pridať novú službu" }) {
   if (wide) {
     return (
       <div
@@ -674,7 +674,7 @@ function AddServiceCard({ onOpen, wide }) {
           <Plus size={26} color="#fff" strokeWidth={2.2} />
         </div>
         <div style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 600 }}>
-          Pridať novú službu
+          {label}
         </div>
       </div>
     );
@@ -992,14 +992,16 @@ function HomeScreen({
         <SectionHeader
           title="Fixné služby"
           action={
-            <div onClick={() => onOpenSheet("fixed")} style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
-              <Plus size={13} /> Pridať
-            </div>
+            activeFixed.length > 0 && (
+              <div onClick={() => onOpenSheet("fixed")} style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
+                <Plus size={13} /> Pridať
+              </div>
+            )
           }
         />
 
         {activeFixed.length === 0 && (
-          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, marginBottom: 8 }}>Zatiaľ žiadny internet ani TV k tomuto účtu.</div>
+          <AddServiceCard wide onOpen={() => onOpenSheet("fixed")} />
         )}
 
         {activeFixed.map((f) => {
