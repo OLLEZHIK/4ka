@@ -104,9 +104,9 @@
   .chip:hover { color: var(--ink); border-color: var(--accent); }
   .chip[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
-  /* in-device scroll rails: swipe, no visible scrollbar */
-  .rail { scrollbar-width: none; -ms-overflow-style: none; }
-  .rail::-webkit-scrollbar { display: none; }
+  /* nothing inside the device shows a scrollbar — it is a phone, it scrolls by touch */
+  .device, .device * { scrollbar-width: none; -ms-overflow-style: none; }
+  .device ::-webkit-scrollbar, .device::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -1092,19 +1092,12 @@ function WalletScreen({ credit, history, onTopUp }) {
 }
 
 // ---------- e-shop: buying a new SIM product ----------
-function EshopScreen({ onBack }) {
+function EshopScreen() {
   const [openId, setOpenId] = useState("sim");
   return (
     <div style={{ padding: "6px 20px 24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-          <ArrowLeft size={15} color={C.ink} />
-        </div>
-        <div>
-          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 600, lineHeight: 1.1 }}>E-shop</div>
-          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>Nové SIM produkty</div>
-        </div>
-      </div>
+      <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 23, fontWeight: 600 }}>4ka E-shop</div>
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12.5, marginBottom: 16 }}>Kúp si SIM alebo eSIM</div>
 
       {eshopProducts.map((p) => {
         const isOpen = openId === p.id;
@@ -1206,18 +1199,18 @@ function PhoneApp({ label }) {
   const tabs = useMemo(() => ([
     { id: "home", label: "Domov", icon: Home },
     { id: "wallet", label: "Peňaženka", icon: WalletIcon },
+    { id: "eshop", label: "E-shop", icon: ShoppingBag },
   ]), []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
       <div className="phone-label">
         <i></i>{label}
-        <button className="chip" aria-pressed={tab === "eshop"} onClick={() => { setTab(tab === "eshop" ? "home" : "eshop"); setOverlay(null); }}>E-shop</button>
         <button className="chip" onClick={reset}>Reset</button>
       </div>
 
       <div style={{ width: 375, height: 780, borderRadius: 44, background: "#000", padding: 10, boxShadow: "0 30px 60px rgba(30,21,48,0.35)" }}>
-        <div style={{ width: "100%", height: "100%", borderRadius: 34, background: C.bg, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+        <div className="device" style={{ width: "100%", height: "100%", borderRadius: 34, background: C.bg, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
           <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 120, height: 22, background: "#000", borderBottomLeftRadius: 14, borderBottomRightRadius: 14, zIndex: 30 }} />
           <StatusBar />
 
@@ -1285,7 +1278,7 @@ function PhoneApp({ label }) {
               />
             )}
             {tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
-            {tab === "eshop" && <EshopScreen onBack={() => setTab("home")} />}
+            {tab === "eshop" && <EshopScreen />}
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
@@ -1298,13 +1291,6 @@ function PhoneApp({ label }) {
                 </div>
               );
             })}
-            {/* third slot stays undecided — placeholder only, no invented destination */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: C.inkFaint, opacity: 0.55 }}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, border: `1px dashed ${C.inkFaint}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <MoreHorizontal size={12} color={C.inkFaint} />
-              </div>
-              <span style={{ fontSize: 10, fontFamily: FONT_BODY, fontWeight: 600, letterSpacing: ".04em" }}>TBD</span>
-            </div>
           </div>
         </div>
       </div>
