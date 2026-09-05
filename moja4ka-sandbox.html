@@ -434,45 +434,84 @@ function PrimaryButton({ children, onClick, disabled }) {
   );
 }
 
+// one control, a dropdown underneath — the number list does not compete with the services
 function NumberSelector({ numbers, activeId, onSelect, onAdd }) {
-  return (
-    <div className="rail" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 18 }}>
-      {numbers.map((n) => {
-        const isActive = n.id === activeId;
-        return (
-          <div
-            key={n.id}
-            onClick={() => onSelect(n.id)}
-            style={{
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "9px 13px",
-              borderRadius: 12,
-              border: `1px solid ${isActive ? C.violet : C.line}`,
-              background: isActive ? C.violetSoft : C.surface,
-              cursor: "pointer",
-            }}
-          >
-            <Smartphone size={13} color={isActive ? C.violet : C.inkFaint} />
-            <div>
-              <div style={{ color: isActive ? C.violetDeep : C.inkDim, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, lineHeight: 1.1 }}>{n.label}</div>
-              <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 10 }}>{n.number}</div>
-            </div>
-          </div>
-        );
-      })}
+  const [open, setOpen] = useState(false);
+  const wrapRef = React.useRef(null);
+  const active = numbers.find((n) => n.id === activeId) || numbers[0];
 
+  React.useEffect(() => {
+    if (!open) return;
+    const onDocDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", marginBottom: 18, zIndex: open ? 15 : 1 }}>
       <div
-        onClick={onAdd}
-        style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 13px", borderRadius: 12, border: `1px dashed ${C.violet}66`, background: C.surface, cursor: "pointer" }}
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "11px 13px", borderRadius: 14, cursor: "pointer",
+          background: C.surface,
+          border: `1px solid ${open ? C.violet : C.line}`,
+        }}
       >
-        <div style={{ width: 22, height: 22, borderRadius: 999, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Plus size={13} color={C.violet} strokeWidth={2.2} />
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Smartphone size={15} color={C.violet} />
         </div>
-        <span style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>Pridať číslo</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600, lineHeight: 1.15 }}>{active.label}</div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, fontVariantNumeric: "tabular-nums" }}>{active.number}</div>
+        </div>
+        <ChevronDown size={16} color={C.inkFaint} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
       </div>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 25,
+            background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: 6,
+            boxShadow: "0 14px 34px rgba(30,21,48,0.16)",
+          }}
+        >
+          {numbers.map((n) => {
+            const isActive = n.id === activeId;
+            return (
+              <div
+                key={n.id}
+                onClick={() => { onSelect(n.id); setOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 8px", borderRadius: 10, cursor: "pointer",
+                  background: isActive ? C.violetSoft : "transparent",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: isActive ? C.violetDeep : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600, lineHeight: 1.15 }}>{n.label}</div>
+                  <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{n.number}</div>
+                </div>
+                {isActive && <Check size={14} color={C.violet} />}
+              </div>
+            );
+          })}
+
+          <div style={{ height: 1, background: C.line, margin: "6px 8px" }} />
+
+          <div
+            onClick={() => { setOpen(false); onAdd(); }}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 8px", borderRadius: 10, cursor: "pointer" }}
+          >
+            <div style={{ width: 20, height: 20, borderRadius: 999, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Plus size={12} color={C.violet} strokeWidth={2.2} />
+            </div>
+            <span style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Pridať číslo</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
