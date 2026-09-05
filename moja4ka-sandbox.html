@@ -104,6 +104,10 @@
   .chip:hover { color: var(--ink); border-color: var(--accent); }
   .chip[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
+  /* in-device scroll rails: swipe, no visible scrollbar */
+  .rail { scrollbar-width: none; -ms-overflow-style: none; }
+  .rail::-webkit-scrollbar { display: none; }
+
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -176,6 +180,8 @@ const Package = icon('<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.7
 const ShoppingBag = icon('<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>');
 const User = icon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>');
 const HelpCircle = icon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>');
+const Globe = icon('<circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/><path d="M2 12h20"/>');
+const CheckCircle = icon('<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>');
 const LogOut = icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>');
 
 // ---------- design tokens (light, 4ka.sk-inspired) ----------
@@ -224,11 +230,14 @@ const seedNumbers = [
   { id: "n2", number: "0900 333 444", label: "Dcéra" },
 ];
 
-// n2 starts without a program, so the empty state is reachable by switching numbers
+// fresh account: no mobile program, no add-ons, no fixed services, no credit
 const seedAssignments = {
-  n1: { tariffId: "t3", addOns: ["a1"] },
+  n1: { tariffId: null, addOns: [] },
   n2: { tariffId: null, addOns: [] },
 };
+const seedFixed = [];
+const seedCredit = 0;
+const seedHistory = [];
 
 const notifications = [
   { id: 1, title: "Vyčerpali ste 80 % dát", time: "Dnes, 8:14" },
@@ -242,11 +251,19 @@ const menuItems = [
   { id: "m3", name: "Odhlásiť sa", icon: LogOut },
 ];
 
-const purchaseHistory = [
-  { id: 1, title: "Dobitie kreditu", date: "2. sep", amount: "+20,00 €" },
-  { id: 2, title: "SLOBODA ∞ — mesačná platba", date: "1. sep", amount: "-20,00 €" },
-  { id: 3, title: "GIGA 2 GB navyše", date: "28. aug", amount: "-2,00 €" },
+const topUpPresets = [5, 10, 20, 30];
+
+// promo rail: two banners visible at a time, swiped right to left
+const promoBanners = [
+  { id: "p1", title: "Odporuč 4ku priateľom", desc: "5 € kredit za každé odporúčanie", icon: Send, from: "#6C2EB5", to: "#4B1F82" },
+  { id: "p2", title: "Nový telefón na splátky", desc: "Pozri si aktuálnu ponuku", icon: ShoppingBag, from: "#FF6B4A", to: "#D2361A" },
+  { id: "p3", title: "Internet 1000", desc: "Prvé 3 mesiace za polovicu", icon: Router, from: "#2FAE7A", to: "#177050" },
+  { id: "p4", title: "eSIM za 5 minút", desc: "Aktivuj priamo v telefóne", icon: Smartphone, from: "#D99A2B", to: "#A96F0F" },
+  { id: "p5", title: "Roaming v EÚ", desc: "Dáta bez príplatku", icon: Globe, from: "#4B1F82", to: "#2A1050" },
 ];
+
+// ---------- money ----------
+const eur = (n) => `${n.toFixed(2).replace(".", ",")} €`;
 
 const eshopProducts = [
   {
@@ -401,20 +418,25 @@ function SheetRow({ title, meta, right, onClick, icon: Icon }) {
   );
 }
 
-function PrimaryButton({ children, onClick }) {
+function PrimaryButton({ children, onClick, disabled }) {
   return (
     <div
-      onClick={onClick}
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "13px 0", borderRadius: 13, background: C.violet, cursor: "pointer" }}
+      onClick={disabled ? undefined : onClick}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+        padding: "13px 0", borderRadius: 13,
+        background: disabled ? C.line : C.violet,
+        cursor: disabled ? "default" : "pointer",
+      }}
     >
-      <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>{children}</span>
+      <span style={{ color: disabled ? C.inkFaint : "#fff", fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>{children}</span>
     </div>
   );
 }
 
-function NumberSelector({ numbers, activeId, onSelect }) {
+function NumberSelector({ numbers, activeId, onSelect, onAdd }) {
   return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 18 }}>
+    <div className="rail" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 18 }}>
       {numbers.map((n) => {
         const isActive = n.id === activeId;
         return (
@@ -441,6 +463,92 @@ function NumberSelector({ numbers, activeId, onSelect }) {
           </div>
         );
       })}
+
+      <div
+        onClick={onAdd}
+        style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 13px", borderRadius: 12, border: `1px dashed ${C.violet}66`, background: C.surface, cursor: "pointer" }}
+      >
+        <div style={{ width: 22, height: 22, borderRadius: 999, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Plus size={13} color={C.violet} strokeWidth={2.2} />
+        </div>
+        <span style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>Pridať číslo</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------- promo rail: two banners per screen, swipe right to left ----------
+function PromoCarousel({ items }) {
+  const railRef = React.useRef(null);
+  const [page, setPage] = useState(0);
+
+  const onScroll = () => {
+    const el = railRef.current;
+    if (!el) return;
+    const step = el.scrollWidth / items.length;
+    setPage(Math.min(items.length - 1, Math.round(el.scrollLeft / step)));
+  };
+
+  const goTo = (i) => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollTo({ left: (el.scrollWidth / items.length) * i, behavior: "smooth" });
+  };
+
+  return (
+    <div>
+      <div
+        ref={railRef}
+        onScroll={onScroll}
+        className="rail"
+        style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 2 }}
+      >
+        {items.map((b) => (
+          <div
+            key={b.id}
+            style={{
+              flex: "0 0 calc(50% - 5px)",
+              scrollSnapAlign: "start",
+              borderRadius: 16,
+              padding: 13,
+              minHeight: 122,
+              background: `linear-gradient(150deg, ${b.from}, ${b.to})`,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ position: "absolute", right: -18, top: -18, width: 62, height: 62, borderRadius: 999, background: "rgba(255,255,255,0.12)" }} />
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <b.icon size={14} color="#fff" />
+            </div>
+            <div>
+              <div style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600, lineHeight: 1.25 }}>{b.title}</div>
+              <div style={{ color: "rgba(255,255,255,0.82)", fontFamily: FONT_BODY, fontSize: 10.5, lineHeight: 1.3, marginTop: 3 }}>{b.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 10 }}>
+        {items.map((b, i) => (
+          <div
+            key={b.id}
+            onClick={() => goTo(i)}
+            style={{
+              width: i === page ? 16 : 6,
+              height: 6,
+              borderRadius: 999,
+              background: i === page ? C.violet : C.line,
+              cursor: "pointer",
+              transition: "width .18s",
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -554,18 +662,23 @@ function ProgramCard({ tariff, onOpen }) {
   );
 }
 
-function EmptyProgramArea() {
-  return (
-    <div style={{ border: `1px dashed ${C.line}`, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 132, background: C.surface }}>
-      <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Žiadny mobilný program</div>
-      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4, lineHeight: 1.4 }}>
-        Na tomto čísle zatiaľ nie je aktívna žiadna mobilná služba.
+// `wide` is the whole of Mobilné služby when the number has nothing yet
+function AddServiceCard({ onOpen, wide }) {
+  if (wide) {
+    return (
+      <div
+        onClick={onOpen}
+        style={{ background: C.violetSoft, border: `1px dashed ${C.violet}55`, borderRadius: 18, padding: "22px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", marginBottom: 10 }}
+      >
+        <div style={{ width: 48, height: 48, borderRadius: 999, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Plus size={26} color="#fff" strokeWidth={2.2} />
+        </div>
+        <div style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 600 }}>
+          Pridať novú službu
+        </div>
       </div>
-    </div>
-  );
-}
-
-function AddServiceCard({ onOpen }) {
+    );
+  }
   return (
     <div
       onClick={onOpen}
@@ -678,6 +791,130 @@ function AddServiceSheet({ hasProgram, activeAddOnIds, onClose, onPickTariff, on
   );
 }
 
+// a new number is a new SIM product, so it hands off to the e-shop
+function NumberSheet({ onClose, onGoEshop }) {
+  return (
+    <Sheet title="Pridať číslo" subtitle="Nové číslo k tomuto účtu" onClose={onClose}>
+      <SheetRow icon={Smartphone} title="Aktivovať eSIM" meta="Hneď v telefóne" onClick={onGoEshop} right={<ChevronRight size={14} color={C.inkFaint} />} />
+      <SheetRow icon={Package} title="Objednať fyzickú SIM" meta="Doručenie na adresu" onClick={onGoEshop} right={<ChevronRight size={14} color={C.inkFaint} />} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 4px 2px", color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>
+        <MoreHorizontal size={14} color={C.inkFaint} />
+        Prenos čísla od iného operátora — TBD
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------- top up: amount, then how it gets paid ----------
+const topUpMethods = [
+  { id: "saved", name: "Úhrada z uloženej karty", desc: "•••• 4471 · sumu stiahneme automaticky", icon: CreditCard },
+  { id: "online", name: "Jednorazová online platba", desc: "Zaplatíš cez platobnú bránu, karta sa neuloží", icon: Globe },
+];
+
+function TopUpSheet({ credit, onClose, onConfirm }) {
+  const [step, setStep] = useState("amount");
+  const [raw, setRaw] = useState("10");
+  const [method, setMethod] = useState("saved");
+
+  const amount = Math.round((parseFloat(String(raw).replace(",", ".")) || 0) * 100) / 100;
+  const valid = amount >= 1 && amount <= 500;
+
+  if (step === "done") {
+    return (
+      <Sheet title="Kredit dobitý" subtitle={`Nový kredit ${eur(credit)}`} onClose={onClose} footer={<PrimaryButton onClick={onClose}>Hotovo</PrimaryButton>}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "18px 0 10px" }}>
+          <CheckCircle size={44} color={C.green} strokeWidth={1.6} />
+          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 22, fontWeight: 700 }}>+{eur(amount)}</div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, textAlign: "center" }}>
+            {method === "saved" ? "Zaplatené uloženou kartou •••• 4471" : "Zaplatené jednorazovou online platbou"}
+          </div>
+        </div>
+      </Sheet>
+    );
+  }
+
+  if (step === "method") {
+    return (
+      <Sheet
+        title="Spôsob platby"
+        subtitle={`Dobitie ${eur(amount)}`}
+        onClose={onClose}
+        footer={<PrimaryButton onClick={() => { onConfirm(amount, method); setStep("done"); }}>Zaplatiť {eur(amount)}</PrimaryButton>}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {topUpMethods.map((m) => {
+            const isOn = method === m.id;
+            return (
+              <div
+                key={m.id}
+                onClick={() => setMethod(m.id)}
+                style={{ display: "flex", alignItems: "center", gap: 11, padding: 13, borderRadius: 14, cursor: "pointer", background: isOn ? C.violetSoft : C.surface, border: `1px solid ${isOn ? C.violet : C.line}` }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: isOn ? C.violet : C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <m.icon size={16} color={isOn ? "#fff" : C.violet} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>{m.name}</div>
+                  <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, lineHeight: 1.35, marginTop: 1 }}>{m.desc}</div>
+                </div>
+                <div style={{ width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${isOn ? C.violet : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {isOn && <div style={{ width: 9, height: 9, borderRadius: 999, background: C.violet }} />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div
+          onClick={() => setStep("amount")}
+          style={{ marginTop: 14, color: C.violet, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
+        >
+          ← Zmeniť sumu
+        </div>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Sheet
+      title="Dobiť kredit"
+      subtitle={`Aktuálny kredit ${eur(credit)}`}
+      onClose={onClose}
+      footer={<PrimaryButton disabled={!valid} onClick={() => setStep("method")}>Pokračovať</PrimaryButton>}
+    >
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        {topUpPresets.map((v) => {
+          const isOn = amount === v;
+          return (
+            <div
+              key={v}
+              onClick={() => setRaw(String(v))}
+              style={{ flex: 1, textAlign: "center", padding: "11px 0", borderRadius: 12, cursor: "pointer", background: isOn ? C.violet : C.surfaceSoft, color: isOn ? "#fff" : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
+            >
+              {v} €
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+        Vlastná suma
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${C.line}`, borderRadius: 13, padding: "12px 14px" }}>
+        <input
+          value={raw}
+          inputMode="decimal"
+          onChange={(e) => setRaw(e.target.value.replace(/[^0-9.,]/g, ""))}
+          style={{ flex: 1, border: "none", outline: "none", background: "transparent", color: C.ink, fontFamily: FONT_HEAD, fontSize: 22, fontWeight: 700, width: "100%" }}
+        />
+        <span style={{ color: C.inkDim, fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 600 }}>€</span>
+      </div>
+      <div style={{ color: valid || !raw ? C.inkFaint : C.coral, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 7 }}>
+        {valid || !raw ? "Dobiť možno od 1 € do 500 €." : "Zadaj sumu od 1 € do 500 €."}
+      </div>
+    </Sheet>
+  );
+}
+
 // ---------- home screen ----------
 function HomeScreen({
   numbers,
@@ -721,17 +958,24 @@ function HomeScreen({
       <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 13 }}>Dobré ráno</div>
       <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 23, fontWeight: 600, marginBottom: 16 }}>Tvoje 4ka</div>
 
-      <NumberSelector numbers={numbers} activeId={activeNumberId} onSelect={(id) => { onSelectNumber(id); setExpandedFixed(null); }} />
+      <NumberSelector
+        numbers={numbers}
+        activeId={activeNumberId}
+        onSelect={(id) => { onSelectNumber(id); setExpandedFixed(null); }}
+        onAdd={() => onOpenSheet("number")}
+      />
 
       {/* mobilné služby: current program (2/3) vs. add a new service (1/3) */}
       <SectionHeader title="Mobilné služby" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.85fr 1fr", gap: 9, marginBottom: 10 }}>
-        {tariff
-          ? <ProgramCard tariff={tariff} onOpen={() => onOpenSheet("program")} />
-          : <EmptyProgramArea />}
-        <AddServiceCard onOpen={() => onOpenSheet("add")} />
-      </div>
+      {tariff ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1.85fr 1fr", gap: 9, marginBottom: 10 }}>
+          <ProgramCard tariff={tariff} onOpen={() => onOpenSheet("program")} />
+          <AddServiceCard onOpen={() => onOpenSheet("add")} />
+        </div>
+      ) : (
+        <AddServiceCard wide onOpen={() => onOpenSheet("add")} />
+      )}
 
       {activeAddOns.map((a) => (
         <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 13px", marginBottom: 8 }}>
@@ -784,29 +1028,19 @@ function HomeScreen({
         })}
       </div>
 
-      {/* promo — visually secondary */}
-      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ background: C.surfaceSoft, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Odporuč 4ku priateľom</div>
-            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Získaj kredit 5 € za každé odporúčanie</div>
-          </div>
-          <ChevronRight size={14} color={C.inkFaint} />
+      {/* promo — visually secondary, swipeable */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
+          Pre teba
         </div>
-        <div style={{ background: C.surfaceSoft, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Nový telefón na splátky</div>
-            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Pozri si aktuálnu ponuku telefónov</div>
-          </div>
-          <ChevronRight size={14} color={C.inkFaint} />
-        </div>
+        <PromoCarousel items={promoBanners} />
       </div>
     </div>
   );
 }
 
 // ---------- wallet screen: top up, card, history ----------
-function WalletScreen() {
+function WalletScreen({ credit, history, onTopUp }) {
   return (
     <div style={{ padding: "6px 20px 24px" }}>
       <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 23, fontWeight: 600, marginBottom: 16 }}>Peňaženka</div>
@@ -814,10 +1048,12 @@ function WalletScreen() {
       <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 20, marginBottom: 18 }}>
         <div style={{ color: "rgba(255,255,255,0.75)", fontFamily: FONT_BODY, fontSize: 12 }}>Aktuálny kredit</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 4 }}>
-          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 32, fontWeight: 700 }}>12,40</span>
+          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 32, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+            {credit.toFixed(2).replace(".", ",")}
+          </span>
           <span style={{ color: "rgba(255,255,255,0.8)", fontFamily: FONT_BODY, fontSize: 14 }}>€</span>
         </div>
-        <div style={{ marginTop: 14, background: "rgba(255,255,255,0.18)", borderRadius: 12, padding: "10px 0", textAlign: "center", cursor: "pointer" }}>
+        <div onClick={onTopUp} style={{ marginTop: 14, background: "rgba(255,255,255,0.18)", borderRadius: 12, padding: "10px 0", textAlign: "center", cursor: "pointer" }}>
           <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Dobiť kredit</span>
         </div>
       </div>
@@ -835,13 +1071,18 @@ function WalletScreen() {
       </div>
 
       <SectionHeader title="História nákupov" />
-      {purchaseHistory.map((p) => (
+      {history.length === 0 && (
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12 }}>Zatiaľ žiadne transakcie.</div>
+      )}
+      {history.map((p) => (
         <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 4px", borderBottom: `1px solid ${C.line}` }}>
           <div>
             <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 }}>{p.title}</div>
             <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>{p.date}</div>
           </div>
-          <span style={{ color: p.amount.startsWith("+") ? C.green : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>{p.amount}</span>
+          <span style={{ color: p.sign > 0 ? C.green : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+            {p.sign > 0 ? "+" : "−"}{eur(p.amount)}
+          </span>
         </div>
       ))}
     </div>
@@ -915,24 +1156,48 @@ function PhoneApp({ label }) {
   const [tab, setTab] = useState("home");
   const [activeNumberId, setActiveNumberId] = useState("n1");
   const [assignments, setAssignments] = useState(seedAssignments);
-  const [fixedActive, setFixedActive] = useState(["f1"]);
-  const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | 'menu' | 'program' | 'add' | 'fixed' | null
+  const [fixedActive, setFixedActive] = useState(seedFixed);
+  const [credit, setCredit] = useState(seedCredit);
+  const [history, setHistory] = useState(seedHistory);
+  const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | 'menu' | 'number' | 'program' | 'add' | 'fixed' | 'topup' | null
 
   const assignment = assignments[activeNumberId] || { tariffId: null, addOns: [] };
   const tariff = tariffCatalog.find((t) => t.id === assignment.tariffId) || null;
   const availableFixed = fixedCatalog.filter((f) => !fixedActive.includes(f.id));
 
-  const setTariff = (numberId, tariffId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], tariffId } }));
-  const addAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: [...prev[numberId].addOns, addOnId] } }));
+  // every purchase shows up in Wallet history
+  const logPurchase = (title, amount, sign) =>
+    setHistory((prev) => [{ id: Date.now() + Math.random(), title, date: "Dnes", amount, sign }, ...prev]);
+
+  const setTariff = (numberId, tariffId) => {
+    const t = tariffCatalog.find((x) => x.id === tariffId);
+    if (t && assignments[numberId].tariffId !== tariffId) logPurchase(`${t.name} — mesačná platba`, t.price, -1);
+    setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], tariffId } }));
+  };
+  const addAddOn = (numberId, addOnId) => {
+    const a = addOnCatalog.find((x) => x.id === addOnId);
+    if (a) logPurchase(a.name, a.price, -1);
+    setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: [...prev[numberId].addOns, addOnId] } }));
+  };
   const removeAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: prev[numberId].addOns.filter((a) => a !== addOnId) } }));
-  const addFixed = (fixedId) => setFixedActive((prev) => [...prev, fixedId]);
+  const addFixed = (fixedId) => {
+    const f = fixedCatalog.find((x) => x.id === fixedId);
+    if (f) logPurchase(f.name, f.price, -1);
+    setFixedActive((prev) => [...prev, fixedId]);
+  };
+  const topUp = (amount, method) => {
+    setCredit((prev) => Math.round((prev + amount) * 100) / 100);
+    logPurchase(method === "saved" ? "Dobitie kreditu · uložená karta" : "Dobitie kreditu · online platba", amount, 1);
+  };
   const removeFixed = (fixedId) => setFixedActive((prev) => prev.filter((f) => f !== fixedId));
 
   const reset = () => {
     setTab("home");
     setActiveNumberId("n1");
     setAssignments(seedAssignments);
-    setFixedActive(["f1"]);
+    setFixedActive(seedFixed);
+    setCredit(seedCredit);
+    setHistory(seedHistory);
     setOverlay(null);
   };
 
@@ -957,6 +1222,12 @@ function PhoneApp({ label }) {
           {overlay === "hugo" && <HugoChat onClose={() => setOverlay(null)} />}
           {overlay === "notif" && <NotificationsPanel onClose={() => setOverlay(null)} />}
           {overlay === "menu" && <MenuSheet onClose={() => setOverlay(null)} />}
+          {overlay === "number" && (
+            <NumberSheet onClose={() => setOverlay(null)} onGoEshop={() => { setOverlay(null); setTab("eshop"); }} />
+          )}
+          {overlay === "topup" && (
+            <TopUpSheet credit={credit} onClose={() => setOverlay(null)} onConfirm={topUp} />
+          )}
 
           {overlay === "program" && tariff && (
             <ProgramSheet
@@ -1011,7 +1282,7 @@ function PhoneApp({ label }) {
                 onOpenMenu={() => setOverlay("menu")}
               />
             )}
-            {tab === "wallet" && <WalletScreen />}
+            {tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
             {tab === "eshop" && <EshopScreen onBack={() => setTab("home")} />}
           </div>
 
