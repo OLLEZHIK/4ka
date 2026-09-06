@@ -185,6 +185,9 @@ const MessageSquare = icon('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2
 const Zap = icon('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>');
 const Shield = icon('<path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-3 8 3Z"/>');
 const Users = icon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
+const Clock = icon('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>');
+const Star = icon('<path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9Z"/>');
+const Sliders = icon('<path d="M4 6h10"/><path d="M18 6h2"/><path d="M4 12h4"/><path d="M12 12h8"/><path d="M4 18h10"/><path d="M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>');
 const Globe = icon('<circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/><path d="M2 12h20"/>');
 const CheckCircle = icon('<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>');
 const LogOut = icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>');
@@ -258,10 +261,54 @@ const tariffCatalog = [
   { id: "t4", name: "VERNÁ KARTA", price: 23, dataLabel: "Neobmedzené", dataPct: 1, minLabel: "Neobmedzené", minPct: 1, digitalOnly: true, loyalty: { floor: 18, step: 1, months: 5 } },
 ];
 
+// every add-on is a catalog service: it carries what the Add Service cards show
 const addOnCatalog = [
-  { id: "a1", name: "GIGA 2 GB navyše", price: 2 },
-  { id: "a2", name: "Roaming balík EÚ+", price: 5 },
-  { id: "a3", name: "Medzinárodné volania", price: 3 },
+  { id: "a1", kind: "addon", name: "GIGA 2 GB navyše", category: "data", price: 2, data: "2 GB", validity: "30 dní", region: "SK", desc: "Rýchle dáta navyše k paušálu." },
+  { id: "d2", kind: "addon", name: "Dáta 10 GB", category: "data", price: 8, data: "10 GB", validity: "30 dní", region: "SK", desc: "Pre streamovanie a prácu na cestách." },
+  { id: "d3", kind: "addon", name: "Dáta 30 GB", category: "data", price: 15, data: "30 GB", validity: "30 dní", region: "SK", desc: "Najväčší dátový balík v ponuke." },
+  { id: "d4", kind: "addon", name: "Nočné dáta", category: "data", price: 4, data: "Neobmedzené", validity: "30 dní", region: "SK", desc: "Neobmedzené dáta medzi 00:00 a 8:00." },
+  { id: "a2", kind: "addon", name: "Roaming balík EÚ+", category: "roaming", price: 5, data: "2 GB", validity: "30 dní", region: "EÚ", desc: "Dáta v EÚ bez príplatku k paušálu." },
+  { id: "r2", kind: "addon", name: "EU Roaming 5 GB", category: "roaming", price: 12.99, data: "5 GB", validity: "30 dní", region: "EÚ", desc: "Dáta v celej Európskej únii." },
+  { id: "r3", kind: "addon", name: "Roaming Europe 10 GB", category: "roaming", price: 19.99, data: "10 GB", minutes: "100 min", validity: "30 dní", region: "Európa", desc: "Najviac dát a volaní v zahraničí.", badge: "Best value", recommended: true },
+  { id: "r4", kind: "addon", name: "Roaming Balkán", category: "roaming", price: 9.99, data: "3 GB", validity: "15 dní", region: "Balkán", desc: "Pre cesty mimo EÚ." },
+  { id: "a3", kind: "addon", name: "Medzinárodné volania", category: "calls", price: 3, minutes: "120 min", validity: "30 dní", region: "Svet", desc: "Volania do zahraničia za nižšiu cenu." },
+  { id: "c2", kind: "addon", name: "Volania 300 minút", category: "calls", price: 5, minutes: "300 min", validity: "30 dní", region: "SK", desc: "Minúty navyše do všetkých sietí." },
+  { id: "s1", kind: "addon", name: "SMS 500", category: "sms", price: 3, sms: "500 SMS", validity: "30 dní", region: "SK", desc: "Pre tých, čo ešte esemeskujú." },
+  { id: "s2", kind: "addon", name: "SMS bez limitu", category: "sms", price: 6, sms: "Neobmedzené", validity: "30 dní", region: "SK", desc: "Neobmedzené SMS v SR." },
+  { id: "b1", kind: "addon", name: "Štart balík", category: "bundle", price: 10, data: "5 GB", minutes: "100 min", sms: "100 SMS", validity: "30 dní", region: "SK", desc: "Dáta, volania a SMS v jednom." },
+  { id: "b2", kind: "addon", name: "Kombo Max", category: "bundle", price: 18, data: "20 GB", minutes: "Neobmedzené", sms: "Neobmedzené", validity: "30 dní", region: "SK", desc: "Všetko naraz, bez rozmýšľania." },
+];
+
+const serviceCategories = [
+  { id: "all", label: "Všetko" },
+  { id: "plan", label: "Paušály" },
+  { id: "roaming", label: "Roaming" },
+  { id: "data", label: "Dáta" },
+  { id: "calls", label: "Volania" },
+  { id: "sms", label: "SMS" },
+  { id: "bundle", label: "Balíky" },
+];
+
+const sortOptions = [
+  { id: "recommended", label: "Odporúčané" },
+  { id: "price-asc", label: "Cena: od najnižšej" },
+  { id: "price-desc", label: "Cena: od najvyššej" },
+  { id: "data-asc", label: "Dáta: od najmenších" },
+  { id: "data-desc", label: "Dáta: od najväčších" },
+];
+
+const priceBands = [
+  { id: "any", label: "Ľubovoľná" },
+  { id: "lt5", label: "do 5 €" },
+  { id: "5-15", label: "5 – 15 €" },
+  { id: "gt15", label: "nad 15 €" },
+];
+
+const durationBands = [
+  { id: "any", label: "Ľubovoľná" },
+  { id: "month", label: "Mesačne" },
+  { id: "30", label: "30 dní" },
+  { id: "15", label: "15 dní" },
 ];
 
 const fixedCatalog = [
@@ -321,6 +368,48 @@ const tariffFeatures = (t) =>
     { icon: Zap, text: `Mobilné dáta: ${t.dataLabel}` },
     { icon: Phone, text: `Volania a SMS: ${t.minLabel}` },
   ];
+
+// tariffs and add-ons share one shape in the Add Service catalog
+const tariffAsService = (t) => ({
+  id: t.id,
+  kind: "tariff",
+  name: t.name,
+  category: "plan",
+  price: t.price,
+  data: t.dataLabel,
+  minutes: t.minLabel,
+  validity: "Mesačne",
+  region: "SK",
+  desc: t.tagline || "Mesačný paušál bez viazanosti.",
+  badge: t.badge,
+  recommended: !!t.badge,
+  tariff: t,
+});
+
+const catalogServices = () => [...tariffCatalog.map(tariffAsService), ...addOnCatalog];
+
+const dataToGb = (label) => {
+  if (!label) return -1;
+  if (/neobmedz/i.test(label)) return 9999;
+  const m = String(label).match(/([\d.,]+)\s*GB/i);
+  return m ? parseFloat(m[1].replace(",", ".")) : 0;
+};
+
+const inPriceBand = (price, band) =>
+  band === "lt5" ? price < 5 : band === "5-15" ? price >= 5 && price <= 15 : band === "gt15" ? price > 15 : true;
+
+const inDurationBand = (validity, band) =>
+  band === "month" ? validity === "Mesačne" : band === "30" ? validity === "30 dní" : band === "15" ? validity === "15 dní" : true;
+
+const sortServices = (items, sort) => {
+  const out = [...items];
+  if (sort === "price-asc") out.sort((a, b) => a.price - b.price);
+  else if (sort === "price-desc") out.sort((a, b) => b.price - a.price);
+  else if (sort === "data-asc") out.sort((a, b) => dataToGb(a.data) - dataToGb(b.data));
+  else if (sort === "data-desc") out.sort((a, b) => dataToGb(b.data) - dataToGb(a.data));
+  else out.sort((a, b) => (b.recommended ? 1 : 0) - (a.recommended ? 1 : 0) || a.price - b.price);
+  return out;
+};
 
 // FlexiGO ships its own ladder; a loyalty tariff gets one derived from its schedule
 const tariffLadder = (t) => {
@@ -873,49 +962,235 @@ function ProgramSheet({ tariff, sims = 1, onClose, onChangeTariff }) {
   );
 }
 
-// adding a new service is its own action, separate from changing the program
-function AddServiceSheet({ hasProgram, activeAddOnIds, onClose, onPickTariff, onPickAddOn }) {
-  const availableAddOns = addOnCatalog.filter((a) => !activeAddOnIds.includes(a.id));
+// ---------- Add Service: a catalog screen of its own ----------
+function MetricPill({ children, onDark }) {
   return (
-    <Sheet title="Pridať novú službu" subtitle="Nová služba k tomuto číslu" onClose={onClose}>
-      {!hasProgram && (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
-            Paušál
+    <span style={{
+      background: onDark ? "rgba(255,255,255,0.18)" : C.surfaceSoft,
+      color: onDark ? "#fff" : C.violetDeep,
+      fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600,
+      padding: "3px 8px", borderRadius: 7, whiteSpace: "nowrap",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function ServiceMetrics({ item, onDark }) {
+  const bits = [item.data, item.minutes, item.sms].filter(Boolean);
+  if (!bits.length) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 }}>
+      {bits.map((b, i) => <MetricPill key={i} onDark={onDark}>{b}</MetricPill>)}
+    </div>
+  );
+}
+
+function FeaturedServiceCard({ item, active, onOpen }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 18, padding: 16, marginBottom: 12, cursor: "pointer" }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Star size={12} color="#FFD98A" strokeWidth={2} />
+        <span style={{ color: "#FFD98A", fontFamily: FONT_BODY, fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>
+          Odporúčame{item.badge ? ` · ${item.badge}` : ""}
+        </span>
+      </div>
+      <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>{item.name}</div>
+      <div style={{ color: "rgba(255,255,255,0.8)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4, lineHeight: 1.35 }}>{item.desc}</div>
+      <ServiceMetrics item={item} onDark />
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 14 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+            <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 26, fontWeight: 700, lineHeight: 1 }}>{eur(item.price)}</span>
           </div>
-          {tariffCatalog.map((t) => (
-            <SheetRow
-              key={t.id}
-              title={<TariffRowTitle tariff={t} />}
-              meta={`${t.dataLabel} · ${t.minLabel}`}
-              onClick={() => onPickTariff(t.id)}
-              right={
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{t.ladder ? `od ${t.price} €` : `${t.price} €`}</span>
-                  <ChevronRight size={14} color={C.inkFaint} />
-                </span>
-              }
-            />
-          ))}
+          <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11, marginTop: 3 }}>{item.validity}</div>
+        </div>
+        <div style={{ background: active ? "rgba(255,255,255,0.2)" : "#fff", borderRadius: 11, padding: "9px 18px" }}>
+          <span style={{ color: active ? "#fff" : C.violetDeep, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>
+            {active ? "Aktívne" : "Pridať"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceCard({ item, active, onOpen }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 9, cursor: "pointer" }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 600 }}>{item.name}</span>
+            {item.badge && (
+              <span style={{ background: C.violet, color: "#fff", fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: 700, letterSpacing: ".08em", padding: "2px 6px", borderRadius: 5 }}>
+                {item.badge}
+              </span>
+            )}
+            {active && (
+              <span style={{ background: `${C.green}1F`, color: C.green, fontFamily: FONT_BODY, fontSize: 9.5, fontWeight: 700, letterSpacing: ".06em", padding: "2px 6px", borderRadius: 5 }}>
+                AKTÍVNE
+              </span>
+            )}
+          </div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 3, lineHeight: 1.35 }}>{item.desc}</div>
+        </div>
+      </div>
+
+      <ServiceMetrics item={item} />
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11 }}>
+        <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>{item.validity}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{eur(item.price)}</span>
+          <div style={{ background: active ? C.surfaceSoft : C.violet, borderRadius: 10, padding: "7px 14px" }}>
+            <span style={{ color: active ? C.inkFaint : "#fff", fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>
+              {active ? "Aktívne" : "Pridať"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FilterSheet({ sort, setSort, priceBand, setPriceBand, duration, setDuration, count, onClose, onReset }) {
+  const chipRow = (options, value, onPick) => (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
+      {options.map((o) => {
+        const isOn = o.id === value;
+        return (
+          <div
+            key={o.id}
+            onClick={() => onPick(o.id)}
+            style={{ padding: "8px 13px", borderRadius: 999, cursor: "pointer", background: isOn ? C.violet : C.surfaceSoft, color: isOn ? "#fff" : C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}
+          >
+            {o.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <Sheet
+      title="Filter a zoradenie"
+      subtitle={`${count} ${count === 1 ? "služba" : count < 5 ? "služby" : "služieb"}`}
+      onClose={onClose}
+      footer={<PrimaryButton onClick={onClose}>Zobraziť výsledky</PrimaryButton>}
+    >
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 8 }}>Zoradiť podľa</div>
+      <div style={{ marginBottom: 16 }}>
+        {sortOptions.map((o) => (
+          <div
+            key={o.id}
+            onClick={() => setSort(o.id)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 2px", cursor: "pointer" }}
+          >
+            <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13 }}>{o.label}</span>
+            <div style={{ width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${sort === o.id ? C.violet : C.line}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {sort === o.id && <div style={{ width: 9, height: 9, borderRadius: 999, background: C.violet }} />}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 8 }}>Cena</div>
+      {chipRow(priceBands, priceBand, setPriceBand)}
+
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 8 }}>Platnosť</div>
+      {chipRow(durationBands, duration, setDuration)}
+
+      <div onClick={onReset} style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "2px 2px 6px" }}>
+        Zrušiť filtre
+      </div>
+    </Sheet>
+  );
+}
+
+function AddServiceScreen({ activeAddOnIds, currentTariffId, onBack, onOpenService }) {
+  const [cat, setCat] = useState("all");
+  const [sort, setSort] = useState("recommended");
+  const [priceBand, setPriceBand] = useState("any");
+  const [duration, setDuration] = useState("any");
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const isActive = (item) => (item.kind === "tariff" ? item.id === currentTariffId : activeAddOnIds.includes(item.id));
+  const filtersOn = priceBand !== "any" || duration !== "any" || sort !== "recommended";
+
+  const items = sortServices(
+    catalogServices().filter(
+      (x) => (cat === "all" || x.category === cat) && inPriceBand(x.price, priceBand) && inDurationBand(x.validity, duration)
+    ),
+    sort
+  );
+
+  const featured = sort === "recommended" ? items.find((x) => x.recommended && !isActive(x)) : null;
+  const rest = featured ? items.filter((x) => x.id !== featured.id) : items;
+
+  return (
+    <div style={{ padding: "6px 20px 28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ArrowLeft size={15} color={C.ink} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 600, lineHeight: 1.1 }}>Pridať službu</div>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>Vyber si to, čo ti sadne</div>
+        </div>
+        <div
+          onClick={() => setFilterOpen(true)}
+          style={{ width: 34, height: 34, borderRadius: 999, background: filtersOn ? C.violet : C.surface, border: `1px solid ${filtersOn ? C.violet : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+        >
+          <Sliders size={15} color={filtersOn ? "#fff" : C.ink} />
+        </div>
+      </div>
+
+      {/* categories */}
+      <div className="rail" style={{ display: "flex", gap: 7, overflowX: "auto", paddingBottom: 4, marginBottom: 14 }}>
+        {serviceCategories.map((c) => {
+          const isOn = cat === c.id;
+          return (
+            <div
+              key={c.id}
+              onClick={() => setCat(c.id)}
+              style={{ flexShrink: 0, padding: "7px 13px", borderRadius: 999, cursor: "pointer", background: isOn ? C.violet : C.surface, border: `1px solid ${isOn ? C.violet : C.line}`, color: isOn ? "#fff" : C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}
+            >
+              {c.label}
+            </div>
+          );
+        })}
+      </div>
+
+      {featured && <FeaturedServiceCard item={featured} active={isActive(featured)} onOpen={() => onOpenService(featured)} />}
+
+      {rest.map((item) => (
+        <ServiceCard key={item.id} item={item} active={isActive(item)} onOpen={() => onOpenService(item)} />
+      ))}
+
+      {items.length === 0 && (
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12.5, textAlign: "center", padding: "26px 0" }}>
+          Pre tento filter nemáme žiadnu službu.
         </div>
       )}
 
-      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
-        Doplnkové balíčky
-      </div>
-      {availableAddOns.length ? (
-        availableAddOns.map((a) => (
-          <SheetRow
-            key={a.id}
-            title={a.name}
-            onClick={() => onPickAddOn(a.id)}
-            right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>+{a.price} €</span>}
-          />
-        ))
-      ) : (
-        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12, padding: "10px 4px" }}>Všetky balíčky sú už aktívne.</div>
+      {filterOpen && (
+        <FilterSheet
+          sort={sort} setSort={setSort}
+          priceBand={priceBand} setPriceBand={setPriceBand}
+          duration={duration} setDuration={setDuration}
+          count={items.length}
+          onClose={() => setFilterOpen(false)}
+          onReset={() => { setSort("recommended"); setPriceBand("any"); setDuration("any"); }}
+        />
       )}
-    </Sheet>
+    </div>
   );
 }
 
@@ -1103,165 +1378,80 @@ function SetupSection({ title, children, note }) {
   );
 }
 
-function TariffSetupScreen({ tariff, credit, onBack, onActivate }) {
+// what an add-on gives you, in the same shape as a tariff's feature list
+const addOnFeatures = (item) => [
+  item.data && { icon: Zap, text: `Dáta: ${item.data}` },
+  item.minutes && { icon: Phone, text: `Volania: ${item.minutes}` },
+  item.sms && { icon: MessageSquare, text: `SMS: ${item.sms}` },
+  item.validity && { icon: Clock, text: `Platnosť: ${item.validity}` },
+  item.region && { icon: Globe, text: `Platí v: ${item.region}` },
+].filter(Boolean);
+
+function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
+  const [step, setStep] = useState("details");
   const [sims, setSims] = useState(1);
   const [method, setMethod] = useState("card");
 
-  const ladder = tariffLadder(tariff);
-  const due = firstMonthPrice(tariff, sims);
-  const monthly = monthlyPrice(tariff, sims);
+  const tariff = item.tariff;
+  const ladder = tariff ? tariffLadder(tariff) : null;
+  const due = tariff ? firstMonthPrice(tariff, sims) : item.price;
+  const monthly = tariff ? monthlyPrice(tariff, sims) : item.price;
   const creditOk = credit >= due;
   const canPay = method !== "credit" || creditOk;
 
-  return (
-    <div style={{ padding: "6px 20px 28px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-          <ArrowLeft size={15} color={C.ink} />
+  // ---------- payment successful ----------
+  if (step === "done") {
+    return (
+      <div style={{ padding: "6px 20px 28px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "40px 0 22px" }}>
+          <CheckCircle size={56} color={C.green} strokeWidth={1.5} />
+          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 600, textAlign: "center" }}>Platba prebehla úspešne</div>
+          <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, textAlign: "center", lineHeight: 1.45 }}>
+            {item.name} je aktívna{item.kind === "tariff" ? " na tvojom čísle" : ""}.
+          </div>
         </div>
-        <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Nastavenie tarifu</div>
+
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "4px 14px", marginBottom: 18 }}>
+          <SheetRow title="Zaplatené" right={<span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>{eur(due)}</span>} />
+          <SheetRow title="Spôsob platby" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{method === "card" ? "Karta •••• 4471" : "Kredit"}</span>} />
+          {item.kind === "tariff" && (
+            <SheetRow title="Ďalšia platba" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{eur(monthly)} / mesiac</span>} />
+          )}
+        </div>
+
+        <PrimaryButton onClick={onDone}>Hotovo</PrimaryButton>
       </div>
+    );
+  }
 
-      {/* hero */}
-      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 18 }}>
-        {tariff.badge && (
-          <span style={{ display: "inline-block", background: "rgba(255,255,255,0.22)", color: "#fff", fontFamily: FONT_BODY, fontSize: 10, fontWeight: 700, letterSpacing: ".1em", padding: "4px 9px", borderRadius: 7, marginBottom: 9 }}>
-            {tariff.badge}
-          </span>
-        )}
-        <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 27, fontWeight: 700, lineHeight: 1.05 }}>{tariff.name}</div>
-        {tariff.tagline && (
-          <div style={{ color: "rgba(255,255,255,0.82)", fontFamily: FONT_BODY, fontSize: 12, lineHeight: 1.4, marginTop: 6 }}>{tariff.tagline}</div>
-        )}
-        <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 14 }}>
-          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{monthly}</span>
-          <span style={{ color: "rgba(255,255,255,0.78)", fontFamily: FONT_BODY, fontSize: 13 }}>€ / mesiac</span>
+  // ---------- select payment method ----------
+  if (step === "payment") {
+    return (
+      <div style={{ padding: "6px 20px 28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div onClick={() => setStep("details")} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <ArrowLeft size={15} color={C.ink} />
+          </div>
+          <div>
+            <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Spôsob platby</div>
+            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>{item.name}</div>
+          </div>
         </div>
-        {ladder && (
-          <div style={{ color: "rgba(255,255,255,0.72)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4 }}>
-            Prvý mesiac {eur(due)}, potom cena klesá
-          </div>
-        )}
-        {tariff.digitalOnly && (
-          <div style={{ marginTop: 12 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.18)", color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 8 }}>
-              <CreditCard size={11} color="#fff" /> Iba digitálne
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* what you get */}
-      <SetupSection title="Čo získaš">
-        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "6px 14px" }}>
-          {tariffFeatures(tariff).map((f, i, arr) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 0", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${C.line}` }}>
-              <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <f.icon size={15} color={C.violet} />
-              </div>
-              <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13 }}>{f.text}</span>
-              <Check size={14} color={C.green} style={{ marginLeft: "auto" }} />
-            </div>
-          ))}
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "4px 14px", marginBottom: 18 }}>
+          <SheetRow
+            title={item.kind === "tariff" && ladder ? "Prvá platba" : "K úhrade"}
+            right={<span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{eur(due)}</span>}
+          />
+          {item.kind === "tariff" && (
+            <SheetRow
+              title={sims > 1 ? `Mesačne (${sims} SIM)` : "Mesačne potom"}
+              right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{eur(monthly)}</span>}
+            />
+          )}
+          <SheetRow title="Platnosť" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{item.validity}</span>} />
         </div>
-      </SetupSection>
 
-      {/* the price ladder */}
-      {ladder && (
-        <SetupSection title="Čím dlhšie zostávaš, tým menej platíš" note="Cena za hlavnú SIM kartu v čase">
-          <div className="rail" style={{ display: "flex", gap: 7, overflowX: "auto", paddingBottom: 2 }}>
-            {ladder.map((stepItem, i) => {
-              const isLast = i === ladder.length - 1;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: "0 0 78px",
-                    borderRadius: 14,
-                    padding: "11px 9px",
-                    textAlign: "center",
-                    background: isLast ? C.violet : C.surface,
-                    border: `1px solid ${isLast ? C.violet : C.line}`,
-                  }}
-                >
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9.5, fontWeight: 600, letterSpacing: ".03em" }}>
-                    {stepItem.month}
-                  </div>
-                  <div style={{ color: isLast ? "#fff" : C.ink, fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 700, margin: "4px 0 2px", fontVariantNumeric: "tabular-nums" }}>
-                    {stepItem.price} €
-                  </div>
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.8)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9, lineHeight: 1.2 }}>
-                    {stepItem.note}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SetupSection>
-      )}
-
-      {/* family configurator */}
-      {tariff.family && (
-        <SetupSection title="Flexi Family" note={`Prvá SIM ${tariff.price} €, každá ďalšia +${tariff.family.extraPrice} €`}>
-          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Počet SIM kariet</div>
-                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 2 }}>Rovnaké služby pre celú rodinu</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  onClick={() => setSims((v) => Math.max(1, v - 1))}
-                  style={{ width: 30, height: 30, borderRadius: 999, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: sims > 1 ? "pointer" : "default", opacity: sims > 1 ? 1 : 0.4 }}
-                >
-                  <span style={{ color: C.violet, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, lineHeight: 1 }}>−</span>
-                </div>
-                <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, minWidth: 14, textAlign: "center" }}>{sims}</span>
-                <div
-                  onClick={() => setSims((v) => Math.min(tariff.family.max, v + 1))}
-                  style={{ width: 30, height: 30, borderRadius: 999, background: sims < tariff.family.max ? C.violet : C.line, display: "flex", alignItems: "center", justifyContent: "center", cursor: sims < tariff.family.max ? "pointer" : "default" }}
-                >
-                  <Plus size={15} color={sims < tariff.family.max ? "#fff" : C.inkFaint} strokeWidth={2.4} />
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
-              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Spolu za {sims} {sims === 1 ? "SIM" : "SIM karty"}</span>
-              <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{monthly} € / mesiac</span>
-            </div>
-          </div>
-        </SetupSection>
-      )}
-
-      {/* benefits */}
-      {tariff.benefits && (
-        <SetupSection title="Exkluzívne benefity po 3 mesiacoch">
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {tariff.benefits.map((b, i) => (
-              <div key={i} style={{ background: C.surfaceSoft, borderRadius: 16, padding: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <b.icon size={15} color="#fff" />
-                  </div>
-                  <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 14, fontWeight: 600 }}>{b.title}</span>
-                </div>
-                <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11.5, lineHeight: 1.45 }}>{b.desc}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
-                  {b.items.map((it, j) => (
-                    <div key={j} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <Check size={13} color={C.green} />
-                      <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12 }}>{it}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </SetupSection>
-      )}
-
-      {/* payment */}
-      <SetupSection title="Spôsob platby">
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           {paymentMethods.map((m) => {
             const disabled = m.id === "credit" && !creditOk;
@@ -1296,17 +1486,160 @@ function TariffSetupScreen({ tariff, credit, onBack, onActivate }) {
             );
           })}
         </div>
+
+        <div style={{ marginTop: 22 }}>
+          <PrimaryButton disabled={!canPay} onClick={() => { onActivate(item, sims, method); setStep("done"); }}>
+            Potvrdiť a zaplatiť {eur(due)}
+          </PrimaryButton>
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, textAlign: "center", marginTop: 9, lineHeight: 1.4 }}>
+            Bez viazanosti, zrušíš kedykoľvek.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- plan details ----------
+  return (
+    <div style={{ padding: "6px 20px 28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ArrowLeft size={15} color={C.ink} />
+        </div>
+        <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>
+          {item.kind === "tariff" ? "Detail paušálu" : "Detail služby"}
+        </div>
+      </div>
+
+      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 18 }}>
+        {item.badge && (
+          <span style={{ display: "inline-block", background: "rgba(255,255,255,0.22)", color: "#fff", fontFamily: FONT_BODY, fontSize: 10, fontWeight: 700, letterSpacing: ".1em", padding: "4px 9px", borderRadius: 7, marginBottom: 9 }}>
+            {item.badge}
+          </span>
+        )}
+        <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 27, fontWeight: 700, lineHeight: 1.05 }}>{item.name}</div>
+        <div style={{ color: "rgba(255,255,255,0.82)", fontFamily: FONT_BODY, fontSize: 12, lineHeight: 1.4, marginTop: 6 }}>{item.desc}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 14 }}>
+          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{eur(monthly)}</span>
+          <span style={{ color: "rgba(255,255,255,0.78)", fontFamily: FONT_BODY, fontSize: 13 }}>
+            {item.validity === "Mesačne" ? "/ mesiac" : `/ ${item.validity}`}
+          </span>
+        </div>
+        {ladder && (
+          <div style={{ color: "rgba(255,255,255,0.72)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4 }}>
+            Prvý mesiac {eur(due)}, potom cena klesá
+          </div>
+        )}
+        {tariff && tariff.digitalOnly && (
+          <div style={{ marginTop: 12 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.18)", color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 8 }}>
+              <CreditCard size={11} color="#fff" /> Iba digitálne
+            </span>
+          </div>
+        )}
+      </div>
+
+      <SetupSection title="Čo získaš">
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "6px 14px" }}>
+          {(tariff ? tariffFeatures(tariff) : addOnFeatures(item)).map((f, i, arr) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 0", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${C.line}` }}>
+              <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <f.icon size={15} color={C.violet} />
+              </div>
+              <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13 }}>{f.text}</span>
+              <Check size={14} color={C.green} style={{ marginLeft: "auto" }} />
+            </div>
+          ))}
+        </div>
       </SetupSection>
 
-      {/* activation */}
-      <div style={{ marginTop: 22 }}>
-        <PrimaryButton disabled={!canPay} onClick={() => onActivate(tariff, sims, method)}>
-          Aktivovať za {eur(due)}
-        </PrimaryButton>
-        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, textAlign: "center", marginTop: 9, lineHeight: 1.4 }}>
-          {ladder ? `Prvý mesiac ${eur(due)}, potom ${eur(monthly)} mesačne. ` : `Mesačná platba ${eur(monthly)}. `}
-          Bez viazanosti, zrušíš kedykoľvek.
+      {ladder && (
+        <SetupSection title="Čím dlhšie zostávaš, tým menej platíš" note="Cena za hlavnú SIM kartu v čase">
+          <div className="rail" style={{ display: "flex", gap: 7, overflowX: "auto", paddingBottom: 2 }}>
+            {ladder.map((stepItem, i) => {
+              const isLast = i === ladder.length - 1;
+              return (
+                <div
+                  key={i}
+                  style={{ flex: "0 0 78px", borderRadius: 14, padding: "11px 9px", textAlign: "center", background: isLast ? C.violet : C.surface, border: `1px solid ${isLast ? C.violet : C.line}` }}
+                >
+                  <div style={{ color: isLast ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9.5, fontWeight: 600, letterSpacing: ".03em" }}>{stepItem.month}</div>
+                  <div style={{ color: isLast ? "#fff" : C.ink, fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 700, margin: "4px 0 2px", fontVariantNumeric: "tabular-nums" }}>{stepItem.price} €</div>
+                  <div style={{ color: isLast ? "rgba(255,255,255,0.8)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9, lineHeight: 1.2 }}>{stepItem.note}</div>
+                </div>
+              );
+            })}
+          </div>
+        </SetupSection>
+      )}
+
+      {tariff && tariff.family && (
+        <SetupSection title="Flexi Family" note={`Prvá SIM ${tariff.price} €, každá ďalšia +${tariff.family.extraPrice} €`}>
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Počet SIM kariet</div>
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 2 }}>Rovnaké služby pre celú rodinu</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  onClick={() => setSims((v) => Math.max(1, v - 1))}
+                  style={{ width: 30, height: 30, borderRadius: 999, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: sims > 1 ? "pointer" : "default", opacity: sims > 1 ? 1 : 0.4 }}
+                >
+                  <span style={{ color: C.violet, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, lineHeight: 1 }}>−</span>
+                </div>
+                <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, minWidth: 14, textAlign: "center" }}>{sims}</span>
+                <div
+                  onClick={() => setSims((v) => Math.min(tariff.family.max, v + 1))}
+                  style={{ width: 30, height: 30, borderRadius: 999, background: sims < tariff.family.max ? C.violet : C.line, display: "flex", alignItems: "center", justifyContent: "center", cursor: sims < tariff.family.max ? "pointer" : "default" }}
+                >
+                  <Plus size={15} color={sims < tariff.family.max ? "#fff" : C.inkFaint} strokeWidth={2.4} />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Spolu za {sims} {sims === 1 ? "SIM" : "SIM karty"}</span>
+              <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{monthly} € / mesiac</span>
+            </div>
+          </div>
+        </SetupSection>
+      )}
+
+      {tariff && tariff.benefits && (
+        <SetupSection title="Exkluzívne benefity po 3 mesiacoch">
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {tariff.benefits.map((b, i) => (
+              <div key={i} style={{ background: C.surfaceSoft, borderRadius: 16, padding: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <b.icon size={15} color="#fff" />
+                  </div>
+                  <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 14, fontWeight: 600 }}>{b.title}</span>
+                </div>
+                <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11.5, lineHeight: 1.45 }}>{b.desc}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
+                  {b.items.map((it, j) => (
+                    <div key={j} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <Check size={13} color={C.green} />
+                      <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12 }}>{it}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SetupSection>
+      )}
+
+      <SetupSection title="Podmienky">
+        <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12, lineHeight: 1.5 }}>
+          Služba platí {item.region === "SK" ? "na Slovensku" : `v regióne ${item.region}`}, {item.validity === "Mesačne" ? "účtuje sa mesačne" : `platnosť ${item.validity}`}.
+          Bez viazanosti, zrušíš ju kedykoľvek v aplikácii.
         </div>
+      </SetupSection>
+
+      <div style={{ marginTop: 22 }}>
+        <PrimaryButton onClick={() => setStep("payment")}>Pokračovať · {eur(due)}</PrimaryButton>
       </div>
     </div>
   );
@@ -1536,7 +1869,8 @@ function PhoneApp({ label }) {
   const [fixedActive, setFixedActive] = useState(seedFixed);
   const [credit, setCredit] = useState(seedCredit);
   const [history, setHistory] = useState(seedHistory);
-  const [setupTariffId, setSetupTariffId] = useState(null); // tariff being configured on its own page
+  const [catalogOpen, setCatalogOpen] = useState(false);   // Add Service catalog page
+  const [detailItem, setDetailItem] = useState(null);      // service opened from the catalog
   const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | 'menu' | 'number' | 'program' | 'add' | 'fixed' | 'topup' | null
 
   const assignment = assignments[activeNumberId] || { tariffId: null, addOns: [] };
@@ -1563,14 +1897,29 @@ function PhoneApp({ label }) {
     if (f) logPurchase(f.name, f.price, -1);
     setFixedActive((prev) => [...prev, fixedId]);
   };
-  const openTariffSetup = (tariffId) => { setOverlay(null); setSetupTariffId(tariffId); };
-  const activateTariff = (t, sims, method) => {
-    const due = firstMonthPrice(t, sims);
-    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: t.id, sims } }));
-    logPurchase(`${t.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`, due, -1);
+  const openTariffSetup = (tariffId) => {
+    const t = tariffCatalog.find((x) => x.id === tariffId);
+    setOverlay(null);
+    if (t) setDetailItem(tariffAsService(t));
+  };
+
+  // one activation path for tariffs and add-ons alike
+  const activateService = (item, sims, method) => {
+    const due = item.kind === "tariff" ? firstMonthPrice(item.tariff, sims) : item.price;
+    if (item.kind === "tariff") {
+      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims } }));
+      logPurchase(`${item.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`, due, -1);
+    } else {
+      setAssignments((prev) => ({
+        ...prev,
+        [activeNumberId]: {
+          ...prev[activeNumberId],
+          addOns: prev[activeNumberId].addOns.includes(item.id) ? prev[activeNumberId].addOns : [...prev[activeNumberId].addOns, item.id],
+        },
+      }));
+      logPurchase(item.name, due, -1);
+    }
     if (method === "credit") setCredit((prev) => Math.round((prev - due) * 100) / 100);
-    setSetupTariffId(null);
-    setTab("home");
   };
   const topUp = (amount, method) => {
     setCredit((prev) => Math.round((prev + amount) * 100) / 100);
@@ -1585,7 +1934,8 @@ function PhoneApp({ label }) {
     setFixedActive(seedFixed);
     setCredit(seedCredit);
     setHistory(seedHistory);
-    setSetupTariffId(null);
+    setCatalogOpen(false);
+    setDetailItem(null);
     setOverlay(null);
   };
 
@@ -1626,16 +1976,6 @@ function PhoneApp({ label }) {
             />
           )}
 
-          {overlay === "add" && (
-            <AddServiceSheet
-              hasProgram={!!tariff}
-              activeAddOnIds={assignment.addOns}
-              onClose={() => setOverlay(null)}
-              onPickTariff={openTariffSetup}
-              onPickAddOn={(id) => { addAddOn(activeNumberId, id); setOverlay(null); }}
-            />
-          )}
-
           {overlay === "fixed" && (
             <Sheet title="Pridať fixnú službu" subtitle="Internet a TV k tomuto účtu" onClose={() => setOverlay(null)}>
               {availableFixed.length ? (
@@ -1656,15 +1996,24 @@ function PhoneApp({ label }) {
           )}
 
           <div style={{ flex: 1, overflowY: "auto" }}>
-            {setupTariffId && (
-              <TariffSetupScreen
-                tariff={tariffCatalog.find((t) => t.id === setupTariffId)}
+            {detailItem && (
+              <ServiceDetailScreen
+                item={detailItem}
                 credit={credit}
-                onBack={() => setSetupTariffId(null)}
-                onActivate={activateTariff}
+                onBack={() => setDetailItem(null)}
+                onActivate={activateService}
+                onDone={() => { setDetailItem(null); setCatalogOpen(false); setTab("home"); }}
               />
             )}
-            {!setupTariffId && tab === "home" && (
+            {!detailItem && catalogOpen && (
+              <AddServiceScreen
+                activeAddOnIds={assignment.addOns}
+                currentTariffId={assignment.tariffId}
+                onBack={() => setCatalogOpen(false)}
+                onOpenService={setDetailItem}
+              />
+            )}
+            {!detailItem && !catalogOpen && tab === "home" && (
               <HomeScreen
                 numbers={seedNumbers}
                 activeNumberId={activeNumberId}
@@ -1673,17 +2022,17 @@ function PhoneApp({ label }) {
                 fixedActive={fixedActive}
                 onRemoveAddOn={removeAddOn}
                 onRemoveFixed={removeFixed}
-                onOpenSheet={setOverlay}
+                onOpenSheet={(kind) => (kind === "add" ? setCatalogOpen(true) : setOverlay(kind))}
                 onOpenHugo={() => setOverlay("hugo")}
                 onOpenNotifications={() => setOverlay("notif")}
                 onOpenMenu={() => setOverlay("menu")}
               />
             )}
-            {!setupTariffId && tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
-            {!setupTariffId && tab === "eshop" && <EshopScreen />}
+            {!detailItem && !catalogOpen && tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
+            {!detailItem && !catalogOpen && tab === "eshop" && <EshopScreen />}
           </div>
 
-          <div style={{ display: setupTariffId ? "none" : "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: detailItem || catalogOpen ? "none" : "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
             {tabs.map(({ id, label: tlabel, icon: Icon }) => {
               const isActive = tab === id;
               return (
