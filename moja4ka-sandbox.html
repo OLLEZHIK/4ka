@@ -239,7 +239,7 @@ const tariffCatalog = [
       { month: "3. mesiac", price: 21, note: "Vidíš benefit" },
       { month: "4. mesiac+", price: 20, note: "Trvalá cena" },
     ],
-    family: { max: 4, extraPrice: 15 },
+    family: { max: 4, extraPrice: 15, poolGb: 300 },
     benefits: [
       {
         icon: Wifi,
@@ -321,12 +321,29 @@ const fixedCatalog = [
 const seedNumbers = [
   { id: "n1", number: "0900 111 222", label: "Ja" },
   { id: "n2", number: "0900 333 444", label: "Dcéra" },
+  { id: "n3", number: "0900 555 666", label: "Manželka" },
 ];
+
+// Flexi Family shares one data pool; usage is per SIM
+const FAMILY_POOL_GB = 300;
+const seedUsage = { n1: 42.6, n2: 18.3, n3: 7.1 };
+const gbLabel = (n) => `${(Math.round(n * 10) / 10).toString().replace(".", ",")} GB`;
+
+// the pool is split evenly across the SIMs in the family
+const evenSplit = (ids) =>
+  ids.map((id, i) => {
+    const share = Math.round((FAMILY_POOL_GB / ids.length) * 10) / 10;
+    const alloc = i === ids.length - 1
+      ? Math.round((FAMILY_POOL_GB - share * (ids.length - 1)) * 10) / 10
+      : share;
+    return { numberId: id, allocGb: alloc };
+  });
 
 // fresh account: no mobile program, no add-ons, no fixed services, no credit
 const seedAssignments = {
-  n1: { tariffId: null, addOns: [], sims: 1 },
-  n2: { tariffId: null, addOns: [], sims: 1 },
+  n1: { tariffId: null, addOns: [], sims: 1, members: [] },
+  n2: { tariffId: null, addOns: [], sims: 1, members: [] },
+  n3: { tariffId: null, addOns: [], sims: 1, members: [] },
 };
 const seedFixed = [];
 const seedCredit = 0;
@@ -450,34 +467,6 @@ function loyaltySchedule(start, floor, step, months) {
   return out;
 }
 
-function StaircaseChart({ start, floor, step, months, accent, labelColor }) {
-  const values = loyaltySchedule(start, floor, step, months);
-  const max = start;
-  const min = floor;
-  const w = 260;
-  const h = 66;
-  const padX = 4;
-  const barW = (w - padX * 2) / values.length - 6;
-  return (
-    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
-      {values.map((v, i) => {
-        const norm = (v - min) / Math.max(1, max - min);
-        const barH = 14 + norm * (h - 24);
-        const x = padX + i * (barW + 6);
-        const y = h - barH - 12;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={barW} height={barH} rx={4} fill={i === values.length - 1 ? accent : `${accent}55`} />
-            <text x={x + barW / 2} y={h - 1} textAnchor="middle" fontSize="7.5" fill={labelColor || C.inkFaint} fontFamily={FONT_BODY}>
-              {i === 0 ? "štart" : `M${i}`}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 function ProgressBar({ pct, label, value }) {
   return (
     <div style={{ marginBottom: 12 }}>
@@ -552,19 +541,6 @@ function Sheet({ title, subtitle, onClose, children, footer }) {
         {footer && <div style={{ paddingTop: 12 }}>{footer}</div>}
       </div>
     </div>
-  );
-}
-
-function TariffRowTitle({ tariff }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      {tariff.name}
-      {tariff.badge && (
-        <span style={{ background: C.violet, color: "#fff", fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: 700, letterSpacing: ".08em", padding: "2px 6px", borderRadius: 5 }}>
-          {tariff.badge}
-        </span>
-      )}
-    </span>
   );
 }
 
@@ -906,59 +882,276 @@ function AddServiceCard({ onOpen, wide, label = "Pridať novú službu" }) {
   );
 }
 
-// detail of the current program; `Zmeniť program` swaps this sheet into picker mode
-function ProgramSheet({ tariff, sims = 1, onClose, onChangeTariff }) {
-  const [mode, setMode] = useState("detail");
+// ---------- the active program, on its own page ----------
+function UsageBar({ used, total, tone }) {
+  const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+  const over = pct > 85;
+  return (
+    <div style={{ height: 7, borderRadius: 999, background: C.violetSoft, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${pct}%`, borderRadius: 999, background: tone || (over ? C.coral : C.violet) }} />
+    </div>
+  );
+}
 
-  if (mode === "change") {
-    return (
-      <Sheet title="Zmeniť program" subtitle="Vyber iný paušál pre toto číslo" onClose={onClose}>
-        {tariffCatalog.map((t) => (
-          <SheetRow
-            key={t.id}
-            title={<TariffRowTitle tariff={t} />}
-            meta={`${t.dataLabel} · ${t.minLabel}`}
-            onClick={() => { onChangeTariff(t.id); setMode("detail"); }}
-            right={
-              <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{t.ladder ? `od ${t.price} €` : `${t.price} €`}</span>
-                {t.id === tariff.id && <Check size={14} color={C.violet} />}
-              </span>
-            }
-          />
-        ))}
-      </Sheet>
-    );
-  }
-
+function MemberSheet({ member, number, usage, poolGb, canRemove, onSetAlloc, onRemove, onClose }) {
+  const used = usage || 0;
+  const pct = member.allocGb > 0 ? Math.round((used / member.allocGb) * 100) : 0;
   return (
     <Sheet
-      title={tariff.name}
-      subtitle={sims > 1 ? `${eur(monthlyPrice(tariff, sims))} / mesiac · ${sims} SIM` : `${eur(tariff.price)} / mesiac`}
+      title={number.label}
+      subtitle={number.number}
       onClose={onClose}
-      footer={<PrimaryButton onClick={() => setMode("change")}>Zmeniť program</PrimaryButton>}
+      footer={<PrimaryButton onClick={onClose}>Hotovo</PrimaryButton>}
     >
-      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
-        Zostáva do konca mesiaca
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+        Pridelené dáta
       </div>
-      <ProgressBar pct={tariff.dataPct} label="Mobilné dáta" value={tariff.dataLabel} />
-      <ProgressBar pct={tariff.minPct} label="Volania / SMS" value={tariff.minLabel} />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginBottom: 10 }}>
+        <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 30, fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+          {gbLabel(member.allocGb)}
+        </span>
+        <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12.5 }}>z {poolGb} GB</span>
+      </div>
 
-      {tariff.digitalOnly && (
-        <div style={{ marginTop: 6 }}>
-          <Pill tone="coral"><CreditCard size={11} /> Iba digitálne, cez kartu</Pill>
+      <input
+        type="range"
+        min={0}
+        max={poolGb}
+        step={5}
+        value={member.allocGb}
+        onChange={(e) => onSetAlloc(Number(e.target.value))}
+        style={{ width: "100%", accentColor: C.violet, marginBottom: 6 }}
+      />
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginBottom: 18, lineHeight: 1.4 }}>
+        Zvyšok balíka sa automaticky rozdelí medzi ostatné SIM karty v rodine.
+      </div>
+
+      <div style={{ background: C.surfaceSoft, borderRadius: 14, padding: 13, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+          <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Spotrebované tento mesiac</span>
+          <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+            {gbLabel(used)} · {pct} %
+          </span>
         </div>
-      )}
+        <UsageBar used={used} total={member.allocGb} />
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 7 }}>
+          Zostáva {gbLabel(Math.max(0, member.allocGb - used))}
+        </div>
+      </div>
 
-      {tariff.loyalty && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-            Vernostná zľava klesá k {tariff.loyalty.floor} €
-          </div>
-          <StaircaseChart start={tariff.price} floor={tariff.loyalty.floor} step={tariff.loyalty.step} months={tariff.loyalty.months} accent={C.violet} />
+      {canRemove && (
+        <div
+          onClick={onRemove}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "12px 0", borderRadius: 13, border: `1px solid ${C.coral}55`, cursor: "pointer" }}
+        >
+          <Trash2 size={13} color={C.coral} />
+          <span style={{ color: C.coral, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Odobrať zo skupiny</span>
         </div>
       )}
     </Sheet>
+  );
+}
+
+function SlotPickerSheet({ numbers, onPick, onClose }) {
+  return (
+    <Sheet title="Pridať číslo do slotu" subtitle="Vyber číslo, ktoré už máš na účte" onClose={onClose}>
+      {numbers.length ? (
+        numbers.map((n) => (
+          <SheetRow
+            key={n.id}
+            icon={Smartphone}
+            title={n.label}
+            meta={n.number}
+            onClick={() => onPick(n.id)}
+            right={<ChevronRight size={14} color={C.inkFaint} />}
+          />
+        ))
+      ) : (
+        <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 12.5, padding: "10px 4px" }}>
+          Všetky tvoje čísla sú už v rodine.
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function ProgramScreen({
+  tariff, assignment, numbers, ownerId, usage,
+  onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onAddSim, onCancelProgram,
+}) {
+  const [memberId, setMemberId] = useState(null);
+  const [slotPicker, setSlotPicker] = useState(false);
+
+  const sims = assignment.sims || 1;
+  const family = tariff.family ? assignment.members || [] : null;
+  const poolGb = tariff.family ? tariff.family.poolGb : 0;
+  const freeSlots = family ? Math.max(0, sims - family.length) : 0;
+  const totalUsed = family ? family.reduce((sum, m) => sum + (usage[m.numberId] || 0), 0) : 0;
+  const numberById = (id) => numbers.find((n) => n.id === id) || { label: id, number: "" };
+  const openMember = family && memberId ? family.find((m) => m.numberId === memberId) : null;
+
+  return (
+    <div style={{ padding: "6px 20px 28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ArrowLeft size={15} color={C.ink} />
+        </div>
+        <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Detail programu</div>
+      </div>
+
+      <div style={{ background: `linear-gradient(150deg, ${C.violet}, ${C.violetDeep})`, borderRadius: 20, padding: 18 }}>
+        <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11 }}>Váš program</div>
+        <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 25, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>{tariff.name}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 10 }}>
+          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{monthlyPrice(tariff, sims)}</span>
+          <span style={{ color: "rgba(255,255,255,0.78)", fontFamily: FONT_BODY, fontSize: 13 }}>€ / mesiac</span>
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.72)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 5 }}>
+          Aktívne na čísle {numberById(ownerId).number}
+          {family ? ` · ${sims} ${sims === 1 ? "SIM" : "SIM karty"}` : ""}
+        </div>
+      </div>
+
+      {/* consumption */}
+      <SetupSection title="Spotreba">
+        {family ? (
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Spoločný balík rodiny</span>
+              <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                {gbLabel(totalUsed)} z {poolGb} GB
+              </span>
+            </div>
+            <UsageBar used={totalUsed} total={poolGb} />
+            <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
+              <Pill tone="green"><Check size={11} /> Volania neobmedzene</Pill>
+              <Pill tone="green"><Check size={11} /> SMS bez limitu</Pill>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "14px 14px 4px" }}>
+            <ProgressBar pct={tariff.dataPct} label="Mobilné dáta" value={tariff.dataLabel} />
+            <ProgressBar pct={tariff.minPct} label="Volania / SMS" value={tariff.minLabel} />
+          </div>
+        )}
+      </SetupSection>
+
+      {/* SIM slots */}
+      {family && (
+        <SetupSection title="SIM sloty" note={`Balík ${poolGb} GB rozdelený medzi členov rodiny`}>
+          {family.map((m) => {
+            const n = numberById(m.numberId);
+            const used = usage[m.numberId] || 0;
+            return (
+              <div
+                key={m.numberId}
+                onClick={() => setMemberId(m.numberId)}
+                style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 9, cursor: "pointer" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 999, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ color: C.violet, fontFamily: FONT_HEAD, fontSize: 14, fontWeight: 700 }}>{n.label.slice(0, 1)}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>
+                      {n.label}{m.numberId === ownerId ? " · hlavná SIM" : ""}
+                    </div>
+                    <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{n.number}</div>
+                  </div>
+                  <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>{gbLabel(m.allocGb)}</span>
+                  <ChevronRight size={14} color={C.inkFaint} />
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <UsageBar used={used} total={m.allocGb} />
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Spotrebované {gbLabel(used)}</span>
+                    <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>Zostáva {gbLabel(Math.max(0, m.allocGb - used))}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {Array.from({ length: freeSlots }).map((_, i) => (
+            <div
+              key={`free-${i}`}
+              onClick={() => setSlotPicker(true)}
+              style={{ border: `1px dashed ${C.violet}55`, background: C.violetSoft, borderRadius: 16, padding: 14, marginBottom: 9, display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }}
+            >
+              <div style={{ width: 34, height: 34, borderRadius: 999, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Plus size={18} color="#fff" strokeWidth={2.2} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: C.violetDeep, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>Voľný slot</div>
+                <div style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 11 }}>Pridaj číslo zo svojho účtu</div>
+              </div>
+              <ChevronRight size={14} color={C.violet} />
+            </div>
+          ))}
+
+          {freeSlots === 0 && sims < tariff.family.max && (
+            <div
+              onClick={onAddSim}
+              style={{ border: `1px solid ${C.line}`, background: C.surface, borderRadius: 16, padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+            >
+              <Plus size={15} color={C.violet} strokeWidth={2.2} />
+              <span style={{ flex: 1, color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Pridať ďalšiu SIM</span>
+              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>+{tariff.family.extraPrice} € / mesiac</span>
+            </div>
+          )}
+        </SetupSection>
+      )}
+
+      {/* settings */}
+      <SetupSection title="Nastavenia programu">
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "4px 14px" }}>
+          {family && (
+            <SheetRow
+              icon={Sliders}
+              title="Dátové limity"
+              meta={`${family.length} ${family.length === 1 ? "SIM" : "SIM karty"} · spolu ${poolGb} GB`}
+              onClick={() => setMemberId(family[0].numberId)}
+              right={<ChevronRight size={14} color={C.inkFaint} />}
+            />
+          )}
+          <SheetRow
+            icon={Zap}
+            title="Zmeniť program"
+            meta="Prejsť na iný paušál"
+            onClick={onChangeProgram}
+            right={<ChevronRight size={14} color={C.inkFaint} />}
+          />
+          <SheetRow
+            icon={Trash2}
+            title="Zrušiť program"
+            meta="Bez viazanosti, k dnešnému dňu"
+            onClick={onCancelProgram}
+            right={<ChevronRight size={14} color={C.inkFaint} />}
+          />
+        </div>
+      </SetupSection>
+
+      {openMember && (
+        <MemberSheet
+          member={openMember}
+          number={numberById(openMember.numberId)}
+          usage={usage[openMember.numberId]}
+          poolGb={poolGb}
+          canRemove={openMember.numberId !== ownerId}
+          onSetAlloc={(gb) => onSetAlloc(openMember.numberId, gb)}
+          onRemove={() => { onRemoveMember(openMember.numberId); setMemberId(null); }}
+          onClose={() => setMemberId(null)}
+        />
+      )}
+
+      {slotPicker && (
+        <SlotPickerSheet
+          numbers={numbers.filter((n) => !family.some((m) => m.numberId === n.id))}
+          onPick={(id) => { onAddMember(id); setSlotPicker(false); }}
+          onClose={() => setSlotPicker(false)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -1391,6 +1584,7 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
   const [step, setStep] = useState("details");
   const [sims, setSims] = useState(1);
   const [method, setMethod] = useState("card");
+  const [familyInfo, setFamilyInfo] = useState(false);
 
   const tariff = item.tariff;
   const ladder = tariff ? tariffLadder(tariff) : null;
@@ -1555,17 +1749,17 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
 
       {ladder && (
         <SetupSection title="Čím dlhšie zostávaš, tým menej platíš" note="Cena za hlavnú SIM kartu v čase">
-          <div className="rail" style={{ display: "flex", gap: 7, overflowX: "auto", paddingBottom: 2 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${ladder.length}, minmax(0, 1fr))`, gap: 6 }}>
             {ladder.map((stepItem, i) => {
               const isLast = i === ladder.length - 1;
               return (
                 <div
                   key={i}
-                  style={{ flex: "0 0 78px", borderRadius: 14, padding: "11px 9px", textAlign: "center", background: isLast ? C.violet : C.surface, border: `1px solid ${isLast ? C.violet : C.line}` }}
+                  style={{ minWidth: 0, borderRadius: 13, padding: "10px 4px", textAlign: "center", background: isLast ? C.violet : C.surface, border: `1px solid ${isLast ? C.violet : C.line}` }}
                 >
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9.5, fontWeight: 600, letterSpacing: ".03em" }}>{stepItem.month}</div>
-                  <div style={{ color: isLast ? "#fff" : C.ink, fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 700, margin: "4px 0 2px", fontVariantNumeric: "tabular-nums" }}>{stepItem.price} €</div>
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.8)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9, lineHeight: 1.2 }}>{stepItem.note}</div>
+                  <div style={{ color: isLast ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9, fontWeight: 600, whiteSpace: "nowrap" }}>{stepItem.month}</div>
+                  <div style={{ color: isLast ? "#fff" : C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, margin: "4px 0 2px", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{stepItem.price} €</div>
+                  <div style={{ color: isLast ? "rgba(255,255,255,0.8)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8.5, lineHeight: 1.15 }}>{stepItem.note}</div>
                 </div>
               );
             })}
@@ -1602,6 +1796,41 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
               <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{monthly} € / mesiac</span>
             </div>
           </div>
+
+          <div
+            onClick={() => setFamilyInfo(true)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 9, padding: "12px 0", borderRadius: 13, border: `1px solid ${C.violet}`, cursor: "pointer" }}
+          >
+            <span style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Viac detailov</span>
+            <ChevronRight size={14} color={C.violet} />
+          </div>
+
+          {familyInfo && (
+            <Sheet
+              title="Dátové limity pre každú SIM"
+              subtitle={`Spoločný balík ${FAMILY_POOL_GB} GB`}
+              onClose={() => setFamilyInfo(false)}
+              footer={<PrimaryButton onClick={() => setFamilyInfo(false)}>Rozumiem</PrimaryButton>}
+            >
+              <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>
+                Po aktivácii môžeš každej SIM karte v rodine nastaviť vlastný dátový limit. Balík {FAMILY_POOL_GB} GB sa
+                na začiatku rozdelí rovným dielom a po pridaní ďalšieho čísla sa prepočíta.
+              </div>
+              {[
+                { icon: Sliders, text: `Vlastný limit pre každú SIM, spolu ${FAMILY_POOL_GB} GB` },
+                { icon: Users, text: "Pridáš čísla, ktoré už na účte máš" },
+                { icon: Zap, text: "Vidíš spotrebu každého člena zvlášť" },
+                { icon: Shield, text: "Limit zmeníš kedykoľvek v detaile programu" },
+              ].map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 2px" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 9, background: C.violetSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <f.icon size={15} color={C.violet} />
+                  </div>
+                  <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13 }}>{f.text}</span>
+                </div>
+              ))}
+            </Sheet>
+          )}
         </SetupSection>
       )}
 
@@ -1869,6 +2098,7 @@ function PhoneApp({ label }) {
   const [fixedActive, setFixedActive] = useState(seedFixed);
   const [credit, setCredit] = useState(seedCredit);
   const [history, setHistory] = useState(seedHistory);
+  const [programOpen, setProgramOpen] = useState(false);   // active program page
   const [catalogOpen, setCatalogOpen] = useState(false);   // Add Service catalog page
   const [detailItem, setDetailItem] = useState(null);      // service opened from the catalog
   const [overlay, setOverlay] = useState(null); // 'hugo' | 'notif' | 'menu' | 'number' | 'program' | 'add' | 'fixed' | 'topup' | null
@@ -1886,11 +2116,6 @@ function PhoneApp({ label }) {
     if (t && assignments[numberId].tariffId !== tariffId) logPurchase(`${t.name} — mesačná platba`, t.price, -1);
     setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], tariffId } }));
   };
-  const addAddOn = (numberId, addOnId) => {
-    const a = addOnCatalog.find((x) => x.id === addOnId);
-    if (a) logPurchase(a.name, a.price, -1);
-    setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: [...prev[numberId].addOns, addOnId] } }));
-  };
   const removeAddOn = (numberId, addOnId) => setAssignments((prev) => ({ ...prev, [numberId]: { ...prev[numberId], addOns: prev[numberId].addOns.filter((a) => a !== addOnId) } }));
   const addFixed = (fixedId) => {
     const f = fixedCatalog.find((x) => x.id === fixedId);
@@ -1907,7 +2132,8 @@ function PhoneApp({ label }) {
   const activateService = (item, sims, method) => {
     const due = item.kind === "tariff" ? firstMonthPrice(item.tariff, sims) : item.price;
     if (item.kind === "tariff") {
-      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims } }));
+      const members = item.tariff.family ? evenSplit([activeNumberId]) : [];
+      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members } }));
       logPurchase(`${item.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`, due, -1);
     } else {
       setAssignments((prev) => ({
@@ -1921,6 +2147,38 @@ function PhoneApp({ label }) {
     }
     if (method === "credit") setCredit((prev) => Math.round((prev - due) * 100) / 100);
   };
+  // ---- Flexi Family: slots, allocations, usage ----
+  const updateMembers = (fn) =>
+    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], members: fn(prev[activeNumberId].members || []) } }));
+
+  const addMember = (numberId) =>
+    updateMembers((members) => evenSplit([...members.map((m) => m.numberId), numberId]));
+
+  const removeMember = (numberId) =>
+    updateMembers((members) => evenSplit(members.filter((m) => m.numberId !== numberId).map((m) => m.numberId)));
+
+  // one SIM takes what you give it; the rest of the pool is shared evenly by the others
+  const setMemberAlloc = (numberId, gb) =>
+    updateMembers((members) => {
+      const value = Math.max(0, Math.min(FAMILY_POOL_GB, gb));
+      const others = members.filter((m) => m.numberId !== numberId);
+      if (!others.length) return members.map((m) => ({ ...m, allocGb: FAMILY_POOL_GB }));
+      const share = Math.round(((FAMILY_POOL_GB - value) / others.length) * 10) / 10;
+      return members.map((m) => (m.numberId === numberId ? { ...m, allocGb: value } : { ...m, allocGb: share }));
+    });
+
+  const addSim = () => {
+    const t = tariffCatalog.find((x) => x.id === assignment.tariffId);
+    if (!t || !t.family) return;
+    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], sims: Math.min(t.family.max, (prev[activeNumberId].sims || 1) + 1) } }));
+    logPurchase(`${t.name} — ďalšia SIM`, t.family.extraPrice, -1);
+  };
+
+  const cancelProgram = () => {
+    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: null, sims: 1, members: [] } }));
+    setProgramOpen(false);
+  };
+
   const topUp = (amount, method) => {
     setCredit((prev) => Math.round((prev + amount) * 100) / 100);
     logPurchase(method === "saved" ? "Dobitie kreditu · uložená karta" : "Dobitie kreditu · online platba", amount, 1);
@@ -1936,6 +2194,7 @@ function PhoneApp({ label }) {
     setHistory(seedHistory);
     setCatalogOpen(false);
     setDetailItem(null);
+    setProgramOpen(false);
     setOverlay(null);
   };
 
@@ -1967,15 +2226,6 @@ function PhoneApp({ label }) {
             <TopUpSheet credit={credit} onClose={() => setOverlay(null)} onConfirm={topUp} />
           )}
 
-          {overlay === "program" && tariff && (
-            <ProgramSheet
-              tariff={tariff}
-              sims={assignment.sims || 1}
-              onClose={() => setOverlay(null)}
-              onChangeTariff={openTariffSetup}
-            />
-          )}
-
           {overlay === "fixed" && (
             <Sheet title="Pridať fixnú službu" subtitle="Internet a TV k tomuto účtu" onClose={() => setOverlay(null)}>
               {availableFixed.length ? (
@@ -1996,6 +2246,22 @@ function PhoneApp({ label }) {
           )}
 
           <div style={{ flex: 1, overflowY: "auto" }}>
+            {!detailItem && !catalogOpen && programOpen && tariff && (
+              <ProgramScreen
+                tariff={tariff}
+                assignment={assignment}
+                numbers={seedNumbers}
+                ownerId={activeNumberId}
+                usage={seedUsage}
+                onBack={() => setProgramOpen(false)}
+                onChangeProgram={() => { setProgramOpen(false); setCatalogOpen(true); }}
+                onAddMember={addMember}
+                onRemoveMember={removeMember}
+                onSetAlloc={setMemberAlloc}
+                onAddSim={addSim}
+                onCancelProgram={cancelProgram}
+              />
+            )}
             {detailItem && (
               <ServiceDetailScreen
                 item={detailItem}
@@ -2013,7 +2279,7 @@ function PhoneApp({ label }) {
                 onOpenService={setDetailItem}
               />
             )}
-            {!detailItem && !catalogOpen && tab === "home" && (
+            {!detailItem && !catalogOpen && !programOpen && tab === "home" && (
               <HomeScreen
                 numbers={seedNumbers}
                 activeNumberId={activeNumberId}
@@ -2022,17 +2288,19 @@ function PhoneApp({ label }) {
                 fixedActive={fixedActive}
                 onRemoveAddOn={removeAddOn}
                 onRemoveFixed={removeFixed}
-                onOpenSheet={(kind) => (kind === "add" ? setCatalogOpen(true) : setOverlay(kind))}
+                onOpenSheet={(kind) =>
+                  kind === "add" ? setCatalogOpen(true) : kind === "program" ? setProgramOpen(true) : setOverlay(kind)
+                }
                 onOpenHugo={() => setOverlay("hugo")}
                 onOpenNotifications={() => setOverlay("notif")}
                 onOpenMenu={() => setOverlay("menu")}
               />
             )}
-            {!detailItem && !catalogOpen && tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
-            {!detailItem && !catalogOpen && tab === "eshop" && <EshopScreen />}
+            {!detailItem && !catalogOpen && !programOpen && tab === "wallet" && <WalletScreen credit={credit} history={history} onTopUp={() => setOverlay("topup")} />}
+            {!detailItem && !catalogOpen && !programOpen && tab === "eshop" && <EshopScreen />}
           </div>
 
-          <div style={{ display: detailItem || catalogOpen ? "none" : "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: detailItem || catalogOpen || programOpen ? "none" : "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "10px 10px 22px", background: C.surface, borderTop: `1px solid ${C.line}` }}>
             {tabs.map(({ id, label: tlabel, icon: Icon }) => {
               const isActive = tab === id;
               return (
