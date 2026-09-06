@@ -975,12 +975,61 @@ function SlotPickerSheet({ numbers, onPick, onClose }) {
   );
 }
 
+// how many extra SIMs, before the payment screen
+function AddSimSheet({ tariff, sims, onClose, onContinue }) {
+  const maxExtra = Math.max(1, tariff.family.max - sims);
+  const [count, setCount] = useState(1);
+  const total = count * tariff.family.extraPrice;
+  return (
+    <Sheet
+      title="Pridať SIM karty"
+      subtitle={`Koľko nových SIM chceš pridať? Každá +${tariff.family.extraPrice} € / mesiac`}
+      onClose={onClose}
+      footer={<PrimaryButton onClick={() => onContinue(count)}>Pokračovať k platbe · {eur(total)}</PrimaryButton>}
+    >
+      <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>Počet nových SIM</div>
+            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 2 }}>
+              Teraz máš {sims} {sims === 1 ? "SIM" : "SIM karty"}, maximum je {tariff.family.max}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              onClick={() => setCount((v) => Math.max(1, v - 1))}
+              style={{ width: 30, height: 30, borderRadius: 999, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: count > 1 ? "pointer" : "default", opacity: count > 1 ? 1 : 0.4 }}
+            >
+              <span style={{ color: C.violet, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, lineHeight: 1 }}>−</span>
+            </div>
+            <span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, minWidth: 14, textAlign: "center" }}>{count}</span>
+            <div
+              onClick={() => setCount((v) => Math.min(maxExtra, v + 1))}
+              style={{ width: 30, height: 30, borderRadius: 999, background: count < maxExtra ? C.violet : C.line, display: "flex", alignItems: "center", justifyContent: "center", cursor: count < maxExtra ? "pointer" : "default" }}
+            >
+              <Plus size={15} color={count < maxExtra ? "#fff" : C.inkFaint} strokeWidth={2.4} />
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+          <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Spolu za {count} {count === 1 ? "SIM" : "SIM karty"}</span>
+          <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>+{eur(total)} / mesiac</span>
+        </div>
+      </div>
+      <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 12, lineHeight: 1.45 }}>
+        Po zaplatení sa v programe otvoria nové voľné sloty a balík {FAMILY_POOL_GB} GB sa prepočíta medzi členmi.
+      </div>
+    </Sheet>
+  );
+}
+
 function ProgramScreen({
   tariff, assignment, numbers, ownerId, usage,
-  onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onAddSim, onCancelProgram,
+  onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onBuySims, onCancelProgram,
 }) {
   const [memberId, setMemberId] = useState(null);
   const [slotPicker, setSlotPicker] = useState(false);
+  const [simSheet, setSimSheet] = useState(false);
 
   const sims = assignment.sims || 1;
   const family = tariff.family ? assignment.members || [] : null;
@@ -1091,7 +1140,7 @@ function ProgramScreen({
 
           {freeSlots === 0 && sims < tariff.family.max && (
             <div
-              onClick={onAddSim}
+              onClick={() => setSimSheet(true)}
               style={{ border: `1px solid ${C.line}`, background: C.surface, borderRadius: 16, padding: "13px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
             >
               <Plus size={15} color={C.violet} strokeWidth={2.2} />
@@ -1141,6 +1190,15 @@ function ProgramScreen({
           onSetAlloc={(gb) => onSetAlloc(openMember.numberId, gb)}
           onRemove={() => { onRemoveMember(openMember.numberId); setMemberId(null); }}
           onClose={() => setMemberId(null)}
+        />
+      )}
+
+      {simSheet && (
+        <AddSimSheet
+          tariff={tariff}
+          sims={sims}
+          onClose={() => setSimSheet(false)}
+          onContinue={(count) => { setSimSheet(false); onBuySims(count); }}
         />
       )}
 
@@ -1580,8 +1638,8 @@ const addOnFeatures = (item) => [
   item.region && { icon: Globe, text: `Platí v: ${item.region}` },
 ].filter(Boolean);
 
-function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
-  const [step, setStep] = useState("details");
+function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, onActivate, onDone }) {
+  const [step, setStep] = useState(initialStep);
   const [sims, setSims] = useState(1);
   const [method, setMethod] = useState("card");
   const [familyInfo, setFamilyInfo] = useState(false);
@@ -1601,7 +1659,7 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
           <CheckCircle size={56} color={C.green} strokeWidth={1.5} />
           <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 600, textAlign: "center" }}>Platba prebehla úspešne</div>
           <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, textAlign: "center", lineHeight: 1.45 }}>
-            {item.name} je aktívna{item.kind === "tariff" ? " na tvojom čísle" : ""}.
+            {item.successText || `${item.name} je aktívna${item.kind === "tariff" ? " na tvojom čísle" : ""}.`}
           </div>
         </div>
 
@@ -1623,7 +1681,7 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
     return (
       <div style={{ padding: "6px 20px 28px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <div onClick={() => setStep("details")} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <div onClick={() => (initialStep === "payment" ? onBack() : setStep("details"))} style={{ width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <ArrowLeft size={15} color={C.ink} />
           </div>
           <div>
@@ -1641,6 +1699,12 @@ function ServiceDetailScreen({ item, credit, onBack, onActivate, onDone }) {
             <SheetRow
               title={sims > 1 ? `Mesačne (${sims} SIM)` : "Mesačne potom"}
               right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{eur(monthly)}</span>}
+            />
+          )}
+          {item.kind === "sim" && (
+            <SheetRow
+              title="Mesačne navyše"
+              right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{eur(item.price)}</span>}
             />
           )}
           <SheetRow title="Platnosť" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{item.validity}</span>} />
@@ -2135,6 +2199,14 @@ function PhoneApp({ label }) {
       const members = item.tariff.family ? evenSplit([activeNumberId]) : [];
       setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members } }));
       logPurchase(`${item.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`, due, -1);
+    } else if (item.kind === "sim") {
+      const t = tariffCatalog.find((x) => x.id === assignment.tariffId);
+      const max = t && t.family ? t.family.max : 4;
+      setAssignments((prev) => ({
+        ...prev,
+        [activeNumberId]: { ...prev[activeNumberId], sims: Math.min(max, (prev[activeNumberId].sims || 1) + item.simCount) },
+      }));
+      logPurchase(`${t ? t.name : "Program"} — ${item.name}`, due, -1);
     } else {
       setAssignments((prev) => ({
         ...prev,
@@ -2167,11 +2239,19 @@ function PhoneApp({ label }) {
       return members.map((m) => (m.numberId === numberId ? { ...m, allocGb: value } : { ...m, allocGb: share }));
     });
 
-  const addSim = () => {
+  const buySims = (count) => {
     const t = tariffCatalog.find((x) => x.id === assignment.tariffId);
     if (!t || !t.family) return;
-    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], sims: Math.min(t.family.max, (prev[activeNumberId].sims || 1) + 1) } }));
-    logPurchase(`${t.name} — ďalšia SIM`, t.family.extraPrice, -1);
+    setDetailItem({
+      kind: "sim",
+      id: `sim-${count}`,
+      name: `${count} ${count === 1 ? "SIM karta" : "SIM karty"} navyše`,
+      price: count * t.family.extraPrice,
+      validity: "Mesačne",
+      region: "SK",
+      simCount: count,
+      successText: `${count} ${count === 1 ? "nová SIM je" : "nové SIM sú"} pripravená v tvojom programe. Prirad k nej číslo v SIM slotoch.`,
+    });
   };
 
   const cancelProgram = () => {
@@ -2258,7 +2338,7 @@ function PhoneApp({ label }) {
                 onAddMember={addMember}
                 onRemoveMember={removeMember}
                 onSetAlloc={setMemberAlloc}
-                onAddSim={addSim}
+                onBuySims={buySims}
                 onCancelProgram={cancelProgram}
               />
             )}
@@ -2266,9 +2346,13 @@ function PhoneApp({ label }) {
               <ServiceDetailScreen
                 item={detailItem}
                 credit={credit}
+                initialStep={detailItem.kind === "sim" ? "payment" : "details"}
                 onBack={() => setDetailItem(null)}
                 onActivate={activateService}
-                onDone={() => { setDetailItem(null); setCatalogOpen(false); setTab("home"); }}
+                onDone={() => {
+                  setDetailItem(null);
+                  if (detailItem.kind !== "sim") { setCatalogOpen(false); setTab("home"); }
+                }}
               />
             )}
             {!detailItem && catalogOpen && (
