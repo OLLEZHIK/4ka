@@ -1056,7 +1056,7 @@ function UsageBar({ used, total, tone }) {
   );
 }
 
-function MemberSheet({ member, number, usage, poolGb, canRemove, onSetAlloc, onRemove, onClose }) {
+function MemberSheet({ member, number, usage, poolGb, extraPrice, canRemove, onSetAlloc, onRemove, onRemoveWithSlot, onClose }) {
   const used = usage || 0;
   const pct = member.allocGb > 0 ? Math.round((used / member.allocGb) * 100) : 0;
   return (
@@ -1103,12 +1103,23 @@ function MemberSheet({ member, number, usage, poolGb, canRemove, onSetAlloc, onR
       </div>
 
       {canRemove && (
-        <div
-          onClick={onRemove}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "12px 0", borderRadius: 13, border: `1px solid ${C.coral}55`, cursor: "pointer" }}
-        >
-          <Trash2 size={13} color={C.coral} />
-          <span style={{ color: C.coral, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Odobrať zo skupiny</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <div
+            onClick={onRemove}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "12px 0", borderRadius: 13, border: `1px solid ${C.line}`, cursor: "pointer" }}
+          >
+            <Users size={13} color={C.inkDim} />
+            <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>Odobrať zo skupiny, slot nechať</span>
+          </div>
+          <div
+            onClick={onRemoveWithSlot}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "12px 0", borderRadius: 13, border: `1px solid ${C.coral}55`, cursor: "pointer" }}
+          >
+            <Trash2 size={13} color={C.coral} />
+            <span style={{ color: C.coral, fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>
+              Odobrať a zrušiť SIM · −{extraPrice} € / mesiac
+            </span>
+          </div>
         </div>
       )}
     </Sheet>
@@ -1195,7 +1206,7 @@ const ladderMonth = (startedAt, steps) => {
 
 function ProgramScreen({
   tariff, assignment, numbers, ownerId, usage,
-  onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onBuySims, onCancelProgram,
+  onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onBuySims, onRemoveSlot, onCancelProgram,
 }) {
   const [memberId, setMemberId] = useState(null);
   const [slotPicker, setSlotPicker] = useState(false);
@@ -1395,11 +1406,19 @@ function ProgramScreen({
               <div style={{ width: 34, height: 34, borderRadius: 999, background: C.violet, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Plus size={18} color="#fff" strokeWidth={2.2} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: C.violetDeep, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600 }}>Voľný slot</div>
                 <div style={{ color: C.violet, fontFamily: FONT_BODY, fontSize: 11 }}>Pridaj číslo zo svojho účtu</div>
               </div>
-              <ChevronRight size={14} color={C.violet} />
+              <div
+                onClick={(e) => { e.stopPropagation(); onRemoveSlot(); }}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 9, padding: "6px 10px", cursor: "pointer" }}
+              >
+                <Trash2 size={12} color={C.coral} />
+                <span style={{ color: C.coral, fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  −{tariff.family.extraPrice} €
+                </span>
+              </div>
             </div>
           ))}
 
@@ -1451,9 +1470,11 @@ function ProgramScreen({
           number={numberById(openMember.numberId)}
           usage={usage[openMember.numberId]}
           poolGb={poolGb}
+          extraPrice={tariff.family.extraPrice}
           canRemove={openMember.numberId !== ownerId}
           onSetAlloc={(gb) => onSetAlloc(openMember.numberId, gb)}
           onRemove={() => { onRemoveMember(openMember.numberId); setMemberId(null); }}
+          onRemoveWithSlot={() => { onRemoveMember(openMember.numberId); onRemoveSlot(); setMemberId(null); }}
           onClose={() => setMemberId(null)}
         />
       )}
@@ -1931,8 +1952,9 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
   const trial = item.trial;
   const trialDate = trial ? addDays(trial.days) : null;
   const dueNow = trial ? 0 : due;
+  const cardOnly = item.cardOnly || !!(tariff && tariff.digitalOnly);
   const creditOk = credit >= dueNow;
-  const canPay = method !== "credit" || creditOk;
+  const canPay = cardOnly ? method === "card" : method !== "credit" || creditOk;
 
   // ---------- payment successful ----------
   if (step === "done") {
@@ -2008,7 +2030,7 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
 
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           {paymentMethods.map((m) => {
-            const disabled = m.id === "credit" && !creditOk;
+            const disabled = m.id === "credit" && (cardOnly || !creditOk);
             const isOn = method === m.id;
             return (
               <div
@@ -2029,7 +2051,11 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
                   <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>{m.name}</div>
                   <div style={{ color: disabled ? C.coral : C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, lineHeight: 1.35, marginTop: 1 }}>
                     {m.id === "credit"
-                      ? (creditOk ? `Dostupný kredit ${eur(credit)}` : `Nedostatočný kredit — máš ${eur(credit)}`)
+                      ? cardOnly
+                        ? "Tento program je iba digitálny — platí sa kartou"
+                        : creditOk
+                        ? `Dostupný kredit ${eur(credit)}`
+                        : `Nedostatočný kredit — máš ${eur(credit)}`
                       : m.desc}
                   </div>
                 </div>
@@ -2049,6 +2075,7 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
             {trial
               ? `Dnes neplatíš nič. Prvá platba ${eur(due)} prebehne ${dateLabel(trialDate)}, ak nezrušíš skôr.`
               : "Bez viazanosti, zrušíš kedykoľvek."}
+            {cardOnly ? " Platba prebieha z uloženej karty." : ""}
           </div>
         </div>
       </div>
@@ -2599,7 +2626,16 @@ function PhoneApp({ label }) {
       validity: "Mesačne",
       region: "SK",
       simCount: count,
+      cardOnly: !!t.digitalOnly,
       successText: `${count} ${count === 1 ? "nová SIM je" : "nové SIM sú"} pripravená v tvojom programe. Prirad k nej číslo v SIM slotoch.`,
+    });
+  };
+
+  const removeSlot = () => {
+    setAssignments((prev) => {
+      const a = prev[activeNumberId];
+      const floor = Math.max(1, (a.members || []).length);
+      return { ...prev, [activeNumberId]: { ...a, sims: Math.max(floor, (a.sims || 1) - 1) } };
     });
   };
 
@@ -2692,6 +2728,7 @@ function PhoneApp({ label }) {
                 onRemoveMember={removeMember}
                 onSetAlloc={setMemberAlloc}
                 onBuySims={buySims}
+                onRemoveSlot={removeSlot}
                 onCancelProgram={cancelProgram}
               />
             )}
