@@ -1186,6 +1186,13 @@ function AddSimSheet({ tariff, sims, onClose, onContinue }) {
   );
 }
 
+// which rung of the price ladder the customer stands on today
+const ladderMonth = (startedAt, steps) => {
+  if (!startedAt) return 1;
+  const days = Math.floor((Date.now() - startedAt) / 86400000);
+  return Math.max(1, Math.min(steps, Math.floor(days / 30) + 1));
+};
+
 function ProgramScreen({
   tariff, assignment, numbers, ownerId, usage,
   onBack, onChangeProgram, onAddMember, onRemoveMember, onSetAlloc, onBuySims, onCancelProgram,
@@ -1199,6 +1206,15 @@ function ProgramScreen({
   const poolGb = tariff.family ? tariff.family.poolGb : 0;
   const freeSlots = family ? Math.max(0, sims - family.length) : 0;
   const totalUsed = family ? family.reduce((sum, m) => sum + (usage[m.numberId] || 0), 0) : 0;
+  const ladder = tariffLadder(tariff);
+  const extras = extraSimPrice(tariff, sims);
+  const month = ladder ? ladderMonth(assignment.startedAt, ladder.length) : 1;
+  const currentStep = ladder ? ladder[month - 1] : null;
+  const finalStep = ladder ? ladder[ladder.length - 1] : null;
+  const startPrice = ladder ? ladder[0].price : tariff.price;
+  const onTrial = !!assignment.trialUntil && assignment.trialUntil > Date.now();
+  const discountNow = ladder ? startPrice - currentStep.price : 0;
+  const discountMax = ladder ? startPrice - finalStep.price : 0;
   const numberById = (id) => numbers.find((n) => n.id === id) || { label: id, number: "" };
   const openMember = family && memberId ? family.find((m) => m.numberId === memberId) : null;
 
@@ -1215,8 +1231,15 @@ function ProgramScreen({
         <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11 }}>Váš program</div>
         <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 25, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>{tariff.name}</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 10 }}>
-          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{monthlyPrice(tariff, sims)}</span>
+          <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 30, fontWeight: 700, lineHeight: 1 }}>
+            {ladder ? currentStep.price + extras : monthlyPrice(tariff, sims)}
+          </span>
           <span style={{ color: "rgba(255,255,255,0.78)", fontFamily: FONT_BODY, fontSize: 13 }}>€ / mesiac</span>
+          {ladder && discountNow > 0 && (
+            <span style={{ background: "rgba(255,255,255,0.2)", color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 7, marginLeft: 4 }}>
+              −{discountNow} €
+            </span>
+          )}
         </div>
         <div style={{ color: "rgba(255,255,255,0.72)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 5 }}>
           Aktívne na čísle {numberById(ownerId).number}
@@ -1231,6 +1254,77 @@ function ProgramScreen({
           </div>
         )}
       </div>
+
+      {/* price progression */}
+      {ladder && (
+        <SetupSection title="Tvoja zľava" note={`${month}. mesiac zo ${ladder.length} · cena klesá automaticky`}>
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12 }}>
+              <div>
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>
+                  {onTrial ? "Po skúšobnom období zaplatíš" : "Teraz platíš"}
+                </div>
+                <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                  {eur(currentStep.price + extras)}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>Trvalá cena</div>
+                <div style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                  {eur(finalStep.price + extras)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${ladder.length}, minmax(0, 1fr))`, gap: 6 }}>
+              {ladder.map((st, i) => {
+                const isPast = i + 1 < month;
+                const isNow = i + 1 === month;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      minWidth: 0, borderRadius: 12, padding: "9px 4px", textAlign: "center",
+                      background: isNow ? C.violet : isPast ? C.violetSoft : C.surface,
+                      border: `1px solid ${isNow ? C.violet : isPast ? C.violetSoft : C.line}`,
+                      opacity: isPast || isNow ? 1 : 0.75,
+                    }}
+                  >
+                    <div style={{ color: isNow ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {st.month}
+                    </div>
+                    <div style={{ color: isNow ? "#fff" : isPast ? C.violetDeep : C.inkDim, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700, margin: "3px 0 2px", fontVariantNumeric: "tabular-nums" }}>
+                      {st.price} €
+                    </div>
+                    <div style={{ color: isNow ? "rgba(255,255,255,0.85)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8, fontWeight: isNow ? 700 : 400 }}>
+                      {isNow ? "Si tu" : isPast ? "Máš za sebou" : st.note}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Tvoja zľava teraz</span>
+              <span style={{ color: discountNow > 0 ? C.green : C.inkDim, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>
+                {discountNow > 0 ? `−${eur(discountNow)} / mesiac` : "zatiaľ žiadna"}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 7 }}>
+              <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>
+                {month < ladder.length ? `Od ${ladder[month].month.toLowerCase()} zaplatíš` : "Túto cenu máš zamknutú"}
+              </span>
+              <span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>
+                {month < ladder.length ? eur(ladder[month].price + extras) : eur(finalStep.price + extras)}
+              </span>
+            </div>
+
+            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 10, lineHeight: 1.45 }}>
+              Cena klesá každý mesiac automaticky, až kým nedosiahne {eur(finalStep.price)}. Celková zľava oproti štartu je {eur(discountMax)} mesačne.
+            </div>
+          </div>
+        </SetupSection>
+      )}
 
       {/* consumption */}
       <SetupSection title="Spotreba">
@@ -2443,7 +2537,10 @@ function PhoneApp({ label }) {
     if (item.kind === "tariff") {
       const members = item.tariff.family ? evenSplit([activeNumberId]) : [];
       const trialUntil = trial ? addDays(trial.days).getTime() : null;
-      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members, trialUntil } }));
+      setAssignments((prev) => ({
+        ...prev,
+        [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members, trialUntil, startedAt: Date.now() },
+      }));
       logPurchase(
         trial
           ? `${item.name} — skúšobné obdobie ${trial.days} dní`
