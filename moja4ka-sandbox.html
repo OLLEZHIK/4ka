@@ -240,6 +240,7 @@ const tariffCatalog = [
       { month: "4. mesiac+", price: 20, note: "Trvalá cena" },
     ],
     family: { max: 4, extraPrice: 15, poolGb: 300 },
+    trial: { days: 7, label: "7 dní zadarmo" },
     benefits: [
       {
         icon: Wifi,
@@ -375,6 +376,14 @@ const promoBanners = [
 // ---------- money ----------
 const eur = (n) => `${n.toFixed(2).replace(".", ",")} €`;
 
+// trial dates are counted from today
+const addDays = (days) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+};
+const dateLabel = (d) => `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+
 const extraSimPrice = (t, sims) => (t.family ? (Math.max(1, sims) - 1) * t.family.extraPrice : 0);
 const monthlyPrice = (t, sims = 1) => t.price + extraSimPrice(t, sims);
 const firstMonthPrice = (t, sims = 1) => (t.ladder ? t.ladder[0].price : t.price) + extraSimPrice(t, sims);
@@ -399,6 +408,7 @@ const tariffAsService = (t) => ({
   region: "SK",
   desc: t.tagline || "Mesačný paušál bez viazanosti.",
   badge: t.badge,
+  trial: t.trial,
   recommended: !!t.badge,
   tariff: t,
 });
@@ -1059,6 +1069,14 @@ function ProgramScreen({
           Aktívne na čísle {numberById(ownerId).number}
           {family ? ` · ${sims} ${sims === 1 ? "SIM" : "SIM karty"}` : ""}
         </div>
+        {assignment.trialUntil && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.coral, borderRadius: 10, padding: "7px 12px", marginTop: 12 }}>
+            <Clock size={13} color="#fff" />
+            <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 11.5, fontWeight: 700 }}>
+              Skúšobné obdobie · prvá platba {dateLabel(new Date(assignment.trialUntil))}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* consumption */}
@@ -1251,17 +1269,25 @@ function FeaturedServiceCard({ item, active, onOpen }) {
       </div>
       <div style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 700, lineHeight: 1.1 }}>{item.name}</div>
       <div style={{ color: "rgba(255,255,255,0.8)", fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 4, lineHeight: 1.35 }}>{item.desc}</div>
+      {item.trial && (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: C.coral, borderRadius: 8, padding: "5px 10px", marginTop: 9 }}>
+          <Clock size={12} color="#fff" />
+          <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 11.5, fontWeight: 700 }}>{item.trial.label}</span>
+        </div>
+      )}
       <ServiceMetrics item={item} onDark />
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 14 }}>
         <div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
             <span style={{ color: "#fff", fontFamily: FONT_HEAD, fontSize: 26, fontWeight: 700, lineHeight: 1 }}>{eur(item.price)}</span>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11, marginTop: 3 }}>{item.validity}</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontFamily: FONT_BODY, fontSize: 11, marginTop: 3 }}>
+            {item.trial ? `${item.validity}, po skúšobnom období` : item.validity}
+          </div>
         </div>
         <div style={{ background: active ? "rgba(255,255,255,0.2)" : "#fff", borderRadius: 11, padding: "9px 18px" }}>
           <span style={{ color: active ? "#fff" : C.violetDeep, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>
-            {active ? "Aktívne" : "Pridať"}
+            {active ? "Aktívne" : item.trial ? "Vyskúšať" : "Pridať"}
           </span>
         </div>
       </div>
@@ -1289,6 +1315,11 @@ function ServiceCard({ item, active, onOpen }) {
                 AKTÍVNE
               </span>
             )}
+            {item.trial && !active && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${C.coral}1A`, color: C.coral, fontFamily: FONT_BODY, fontSize: 9.5, fontWeight: 700, letterSpacing: ".05em", padding: "2px 7px", borderRadius: 5 }}>
+                <Clock size={10} color={C.coral} /> {item.trial.days} DNÍ ZADARMO
+              </span>
+            )}
           </div>
           <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5, marginTop: 3, lineHeight: 1.35 }}>{item.desc}</div>
         </div>
@@ -1297,12 +1328,14 @@ function ServiceCard({ item, active, onOpen }) {
       <ServiceMetrics item={item} />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11 }}>
-        <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>{item.validity}</span>
+        <span style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11.5 }}>
+          {item.trial && !active ? `Potom ${item.validity.toLowerCase()}` : item.validity}
+        </span>
         <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
           <span style={{ color: C.violetDeep, fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{eur(item.price)}</span>
           <div style={{ background: active ? C.surfaceSoft : C.violet, borderRadius: 10, padding: "7px 14px" }}>
             <span style={{ color: active ? C.inkFaint : "#fff", fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: 600 }}>
-              {active ? "Aktívne" : "Pridať"}
+              {active ? "Aktívne" : item.trial ? "Vyskúšať" : "Pridať"}
             </span>
           </div>
         </div>
@@ -1648,7 +1681,10 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
   const ladder = tariff ? tariffLadder(tariff) : null;
   const due = tariff ? firstMonthPrice(tariff, sims) : item.price;
   const monthly = tariff ? monthlyPrice(tariff, sims) : item.price;
-  const creditOk = credit >= due;
+  const trial = item.trial;
+  const trialDate = trial ? addDays(trial.days) : null;
+  const dueNow = trial ? 0 : due;
+  const creditOk = credit >= dueNow;
   const canPay = method !== "credit" || creditOk;
 
   // ---------- payment successful ----------
@@ -1657,18 +1693,24 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
       <div style={{ padding: "6px 20px 28px" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "40px 0 22px" }}>
           <CheckCircle size={56} color={C.green} strokeWidth={1.5} />
-          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 600, textAlign: "center" }}>Platba prebehla úspešne</div>
+          <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 600, textAlign: "center" }}>
+            {trial ? "Skúšobné obdobie beží" : "Platba prebehla úspešne"}
+          </div>
           <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 13, textAlign: "center", lineHeight: 1.45 }}>
-            {item.successText || `${item.name} je aktívna${item.kind === "tariff" ? " na tvojom čísle" : ""}.`}
+            {trial
+              ? `${item.name} máš ${trial.days} dní zadarmo. Prvá platba ${eur(due)} prebehne ${dateLabel(trialDate)}.`
+              : item.successText || `${item.name} je aktívna${item.kind === "tariff" ? " na tvojom čísle" : ""}.`}
           </div>
         </div>
 
         <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "4px 14px", marginBottom: 18 }}>
-          <SheetRow title="Zaplatené" right={<span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>{eur(due)}</span>} />
+          <SheetRow title="Zaplatené dnes" right={<span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700 }}>{eur(dueNow)}</span>} />
           <SheetRow title="Spôsob platby" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{method === "card" ? "Karta •••• 4471" : "Kredit"}</span>} />
-          {item.kind === "tariff" && (
+          {trial ? (
+            <SheetRow title="Prvá platba" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{dateLabel(trialDate)} · {eur(due)}</span>} />
+          ) : item.kind === "tariff" ? (
             <SheetRow title="Ďalšia platba" right={<span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12.5 }}>{eur(monthly)} / mesiac</span>} />
-          )}
+          ) : null}
         </div>
 
         <PrimaryButton onClick={onDone}>Hotovo</PrimaryButton>
@@ -1692,9 +1734,16 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
 
         <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "4px 14px", marginBottom: 18 }}>
           <SheetRow
-            title={item.kind === "tariff" && ladder ? "Prvá platba" : "K úhrade"}
-            right={<span style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{eur(due)}</span>}
+            title={trial ? "Dnes zaplatíš" : item.kind === "tariff" && ladder ? "Prvá platba" : "K úhrade"}
+            right={<span style={{ color: trial ? C.green : C.ink, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700 }}>{eur(dueNow)}</span>}
           />
+          {trial && (
+            <SheetRow
+              title={`Prvá platba ${dateLabel(trialDate)}`}
+              meta={`Po ${trial.days} dňoch zadarmo`}
+              right={<span style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}>{eur(due)}</span>}
+            />
+          )}
           {item.kind === "tariff" && (
             <SheetRow
               title={sims > 1 ? `Mesačne (${sims} SIM)` : "Mesačne potom"}
@@ -1747,10 +1796,12 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
 
         <div style={{ marginTop: 22 }}>
           <PrimaryButton disabled={!canPay} onClick={() => { onActivate(item, sims, method); setStep("done"); }}>
-            Potvrdiť a zaplatiť {eur(due)}
+            {trial ? "Aktivovať skúšobné obdobie" : `Potvrdiť a zaplatiť ${eur(due)}`}
           </PrimaryButton>
           <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, textAlign: "center", marginTop: 9, lineHeight: 1.4 }}>
-            Bez viazanosti, zrušíš kedykoľvek.
+            {trial
+              ? `Dnes neplatíš nič. Prvá platba ${eur(due)} prebehne ${dateLabel(trialDate)}, ak nezrušíš skôr.`
+              : "Bez viazanosti, zrušíš kedykoľvek."}
           </div>
         </div>
       </div>
@@ -1788,6 +1839,14 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
             Prvý mesiac {eur(due)}, potom cena klesá
           </div>
         )}
+        {trial && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.coral, borderRadius: 10, padding: "7px 12px", marginTop: 12 }}>
+            <Clock size={13} color="#fff" />
+            <span style={{ color: "#fff", fontFamily: FONT_BODY, fontSize: 12, fontWeight: 700 }}>
+              Vyskúšaj {trial.days} dní zadarmo
+            </span>
+          </div>
+        )}
         {tariff && tariff.digitalOnly && (
           <div style={{ marginTop: 12 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.18)", color: "#fff", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 8 }}>
@@ -1796,6 +1855,29 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
           </div>
         )}
       </div>
+
+      {trial && (
+        <SetupSection title="Vyskúšaj zadarmo">
+          <div style={{ background: `${C.coral}12`, border: `1px solid ${C.coral}44`, borderRadius: 16, padding: 14 }}>
+            <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.5 }}>
+              Prvých {trial.days} dní neplatíš nič — máš celý paušál so všetkým, čo obsahuje.
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.coral}33` }}>
+              <div>
+                <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11.5 }}>Prvá platba</div>
+                <div style={{ color: C.ink, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 700 }}>{dateLabel(trialDate)}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 11.5 }}>Dnes zaplatíš</div>
+                <div style={{ color: C.green, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 700 }}>0,00 €</div>
+              </div>
+            </div>
+            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, marginTop: 10, lineHeight: 1.4 }}>
+              Ak zrušíš do {dateLabel(trialDate)}, nezaplatíš nič.
+            </div>
+          </div>
+        </SetupSection>
+      )}
 
       <SetupSection title="Čo získaš">
         <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "6px 14px" }}>
@@ -1932,7 +2014,14 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
       </SetupSection>
 
       <div style={{ marginTop: 22 }}>
-        <PrimaryButton onClick={() => setStep("payment")}>Pokračovať · {eur(due)}</PrimaryButton>
+        <PrimaryButton onClick={() => setStep("payment")}>
+          {trial ? "Vyskúšať zadarmo" : `Pokračovať · ${eur(due)}`}
+        </PrimaryButton>
+        {trial && (
+          <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11, textAlign: "center", marginTop: 9, lineHeight: 1.4 }}>
+            {trial.days} dní zadarmo, prvá platba {eur(due)} dňa {dateLabel(trialDate)}.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2090,8 +2179,8 @@ function WalletScreen({ credit, history, onTopUp }) {
             <div style={{ color: C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 }}>{p.title}</div>
             <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 11 }}>{p.date}</div>
           </div>
-          <span style={{ color: p.sign > 0 ? C.green : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-            {p.sign > 0 ? "+" : "−"}{eur(p.amount)}
+          <span style={{ color: p.amount === 0 ? C.inkFaint : p.sign > 0 ? C.green : C.ink, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+            {p.amount === 0 ? "" : p.sign > 0 ? "+" : "−"}{eur(p.amount)}
           </span>
         </div>
       ))}
@@ -2195,10 +2284,19 @@ function PhoneApp({ label }) {
   // one activation path for tariffs and add-ons alike
   const activateService = (item, sims, method) => {
     const due = item.kind === "tariff" ? firstMonthPrice(item.tariff, sims) : item.price;
+    const trial = item.trial;
+    const charged = trial ? 0 : due;
     if (item.kind === "tariff") {
       const members = item.tariff.family ? evenSplit([activeNumberId]) : [];
-      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members } }));
-      logPurchase(`${item.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`, due, -1);
+      const trialUntil = trial ? addDays(trial.days).getTime() : null;
+      setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: item.tariff.id, sims, members, trialUntil } }));
+      logPurchase(
+        trial
+          ? `${item.name} — skúšobné obdobie ${trial.days} dní`
+          : `${item.name} — prvá platba${sims > 1 ? ` · ${sims} SIM` : ""}`,
+        charged,
+        -1
+      );
     } else if (item.kind === "sim") {
       const t = tariffCatalog.find((x) => x.id === assignment.tariffId);
       const max = t && t.family ? t.family.max : 4;
@@ -2217,7 +2315,7 @@ function PhoneApp({ label }) {
       }));
       logPurchase(item.name, due, -1);
     }
-    if (method === "credit") setCredit((prev) => Math.round((prev - due) * 100) / 100);
+    if (method === "credit" && charged > 0) setCredit((prev) => Math.round((prev - charged) * 100) / 100);
   };
   // ---- Flexi Family: slots, allocations, usage ----
   const updateMembers = (fn) =>
@@ -2255,7 +2353,7 @@ function PhoneApp({ label }) {
   };
 
   const cancelProgram = () => {
-    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: null, sims: 1, members: [] } }));
+    setAssignments((prev) => ({ ...prev, [activeNumberId]: { ...prev[activeNumberId], tariffId: null, sims: 1, members: [], trialUntil: null } }));
     setProgramOpen(false);
   };
 
