@@ -1287,33 +1287,8 @@ function ProgramScreen({
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${ladder.length}, minmax(0, 1fr))`, gap: 6 }}>
-              {ladder.map((st, i) => {
-                const isPast = i + 1 < month;
-                const isNow = i + 1 === month;
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      minWidth: 0, borderRadius: 12, padding: "9px 4px", textAlign: "center",
-                      background: isNow ? C.violet : isPast ? C.violetSoft : C.surface,
-                      border: `1px solid ${isNow ? C.violet : isPast ? C.violetSoft : C.line}`,
-                      opacity: isPast || isNow ? 1 : 0.75,
-                    }}
-                  >
-                    <div style={{ color: isNow ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {st.month}
-                    </div>
-                    <div style={{ color: isNow ? "#fff" : isPast ? C.violetDeep : C.inkDim, fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700, margin: "3px 0 2px", fontVariantNumeric: "tabular-nums" }}>
-                      {st.price} €
-                    </div>
-                    <div style={{ color: isNow ? "rgba(255,255,255,0.85)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8, fontWeight: isNow ? 700 : 400 }}>
-                      {isNow ? "Si tu" : isPast ? "Máš za sebou" : st.note}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <PriceLadder ladder={ladder} currentIndex={month - 1} />
+            <PriceLadderNotes ladder={ladder} currentIndex={month - 1} />
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
               <span style={{ color: C.inkDim, fontFamily: FONT_BODY, fontSize: 12 }}>Tvoja zľava teraz</span>
@@ -1930,6 +1905,63 @@ function SetupSection({ title, children, note }) {
   );
 }
 
+// a chart, not a row of buttons: descending bars on a baseline
+function PriceLadder({ ladder, currentIndex = null }) {
+  const prices = ladder.map((s) => s.price);
+  const max = Math.max(...prices);
+  const min = Math.min(...prices);
+  const height = (price) => (max === min ? 46 : 30 + ((price - min) / (max - min)) * 32);
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, borderBottom: `1px solid ${C.line}`, paddingBottom: 0 }}>
+      {ladder.map((st, i) => {
+        const isLast = i === ladder.length - 1;
+        const isNow = currentIndex !== null && i === currentIndex;
+        const isPast = currentIndex !== null && i < currentIndex;
+        const filled = currentIndex === null ? isLast : isNow;
+        const bg = filled ? C.violet : isPast ? `${C.violet}55` : C.violetSoft;
+        return (
+          <div key={i} style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            <div style={{ color: C.inkFaint, fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: 600, whiteSpace: "nowrap", marginBottom: 3 }}>
+              {st.month}
+            </div>
+            <div style={{ color: filled ? C.violetDeep : C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+              {st.price} €
+            </div>
+            <div style={{ height: height(st.price), background: bg, borderTopLeftRadius: 6, borderTopRightRadius: 6, marginTop: 5 }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PriceLadderNotes({ ladder, currentIndex = null }) {
+  return (
+    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+      {ladder.map((st, i) => {
+        const isLast = i === ladder.length - 1;
+        const isNow = currentIndex !== null && i === currentIndex;
+        const isPast = currentIndex !== null && i < currentIndex;
+        const text = currentIndex === null ? st.note : isNow ? "Si tu" : isPast ? "Máš za sebou" : st.note;
+        const strong = currentIndex === null ? isLast : isNow;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1, minWidth: 0, textAlign: "center", lineHeight: 1.2,
+              color: strong ? C.violet : C.inkFaint,
+              fontFamily: FONT_BODY, fontSize: 8.5, fontWeight: strong ? 700 : 500,
+            }}
+          >
+            {text}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // what an add-on gives you, in the same shape as a tariff's feature list
 const addOnFeatures = (item) => [
   item.data && { icon: Zap, text: `Dáta: ${item.data}` },
@@ -2169,20 +2201,9 @@ function ServiceDetailScreen({ item, credit, initialStep = "details", onBack, on
 
       {ladder && (
         <SetupSection title="Čím dlhšie zostávaš, tým menej platíš" note="Cena za hlavnú SIM kartu v čase">
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${ladder.length}, minmax(0, 1fr))`, gap: 6 }}>
-            {ladder.map((stepItem, i) => {
-              const isLast = i === ladder.length - 1;
-              return (
-                <div
-                  key={i}
-                  style={{ minWidth: 0, borderRadius: 13, padding: "10px 4px", textAlign: "center", background: isLast ? C.violet : C.surface, border: `1px solid ${isLast ? C.violet : C.line}` }}
-                >
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.75)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 9, fontWeight: 600, whiteSpace: "nowrap" }}>{stepItem.month}</div>
-                  <div style={{ color: isLast ? "#fff" : C.ink, fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 700, margin: "4px 0 2px", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{stepItem.price} €</div>
-                  <div style={{ color: isLast ? "rgba(255,255,255,0.8)" : C.inkFaint, fontFamily: FONT_BODY, fontSize: 8.5, lineHeight: 1.15 }}>{stepItem.note}</div>
-                </div>
-              );
-            })}
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+            <PriceLadder ladder={ladder} />
+            <PriceLadderNotes ladder={ladder} />
           </div>
         </SetupSection>
       )}
